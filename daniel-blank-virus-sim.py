@@ -2,7 +2,7 @@ import os
 import random
 
 #Sim parameters
-length_of_sim = 1000000 #How many timesteps the simulation is.
+length_of_sim = 10 #How many timesteps the simulation is.
 timestep_size = .00001157 #How long each timestep is (here, a second)
 grid_size = 100 #How many squares on a side the grid has.
 min_lat = 39 #lowest possible latitude
@@ -65,20 +65,21 @@ TODO: possibly have humans carry probabilities of infection? How do you implemen
 class Human(object):
 
     def __init__(self, filepath):
+        self.filepath = filepath
         self.infected = False #Humans start healthy
         self.incubationLeft = -1
         self.infectionLeft = -1
-        self.trajectories = os.listdir(filepath) #all this human's trajectories
+        self.trajectories = [filepath + "/" + traj for traj in os.listdir(filepath)] #all this human's trajectories
         self.trajectories.sort() #hopefully the timestamps sort to chronological order
         self.trajectoryIterator = iter(self.trajectories)
         self.currTrajectory = open(next(self.trajectoryIterator))
         for i in range(6):
             self.currTrajectory.readline()
         self.posData = self.currTrajectory.readline().split(",")
-        self.lat = self.posData[0]
-        self.lon = self.posData[1]
-        self.alt = self.posData[3]
-        self.time = self.posData[4]
+        self.lat = float(self.posData[0])
+        self.lon = float(self.posData[1])
+        self.alt = float(self.posData[3])
+        self.time = float(self.posData[4])
         self.alive = True
         self.immune = False
         self.gridIndexA, self.gridIndexB = gridify(self.lat, self.lon)
@@ -103,10 +104,10 @@ class Human(object):
                     self.currTrajectory.readline()
                 posData = self.currTrajectory.readline()
 
-            self.lat = posData[0]
-            self.lon = posData[1]
-            self.alt = posData[3]
-            self.time = posData[4]
+            self.lat = float(posData[0])
+            self.lon = float(posData[1])
+            self.alt = float(posData[3])
+            self.time = float(posData[4])
             self.posData = posData
             self.gridIndexA, self.gridIndexB = gridify(self.lat, self.lon)
             gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
@@ -144,10 +145,11 @@ class Human(object):
 
 
 #simulation setup
-humanPaths = os.listdir("path to humans")
+basePath = "C:/Users/Daniel/Downloads/Geolife Trajectories 1.3/Geolife Trajectories 1.3/Data" #path to the data of all humans, edit for your own machine
+humanPaths = os.listdir(basePath)
 humans = []
 for path in humanPaths:
-    humans.append(Human(path))
+    humans.append(Human(basePath + "/" + path + "/" + "Trajectory"))
     humans[len(humans) - 1].stepTo(humans[0].time) #start at the starting time of the first human.
 currTime = humans[0].time
 startTime = currTime
@@ -169,7 +171,7 @@ while(currTime < startTime + length_of_sim * timestep_size):
                     h.infect()
 
 
-print(gridA)
+print([[[h.infected for h in cell] for cell in row]for row in gridA])
 
 
 
