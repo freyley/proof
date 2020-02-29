@@ -52,6 +52,8 @@ def gridify(lat, lon):
     else:
         latIndexA = int((lat - min_lat)/lat_step)
         latIndexB = int((lat - (min_lat - .5 * lat_step)) / lat_step)
+        if latIndexB >= grid_size:
+            latIndexB = grid_size - 1
     if lon < min_lon:
         lonIndexA = 0
         lonIndexB = 0
@@ -61,6 +63,8 @@ def gridify(lat, lon):
     else:
         lonIndexA = int((lon - min_lon) / lon_step)
         lonIndexB = int((lon - (min_lon - .5 * lon_step)) / lon_step)
+        if lonIndexB >= grid_size:
+            lonIndexB = grid_size - 1
     return ((latIndexA, lonIndexA), (latIndexB, lonIndexB))
 
 """
@@ -170,7 +174,7 @@ def episimulation(n): # Sets up and triggers the simulation n times
             currTime += timestep_size
             [h.stepTo(currTime) for h in humans] #step to a specific time, decrementing timers accordingly
             for transmitter in humans:
-                if transmitter.infected: #model spread of the virus to nearby humans
+                if transmitter.infected and transmitter.incubationLeft <= 0: #model spread of the virus to nearby humans
                     for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
                         if h != transmitter:
                             h.infect()
