@@ -25,13 +25,16 @@ immunity = .77 #Probability of immunity if someone recovers when the duration en
 #grid setup
 gridA = []
 gridB = []
+riskGrid = []
 
 for i in range(grid_size):
     gridA.append([])
     gridB.append([])
+    riskGrid.append([])
     for j in range(grid_size):
         gridA[i].append([]) #each cell in the grid is a (possibly empty) list of humans.
         gridB[i].append([])
+        riskGrid[i].append([0])
 
 """
 This function takes a latitude and longitude, and converts it to two sets of two grid indices, one per grid, which it returns.
@@ -115,6 +118,9 @@ class Human(object):
 
 
             if(self.infected):
+                # Start my meddling
+                riskGrid[self.gridIndexA[0]][self.gridIndexA[1]][0] = riskGrid[self.gridIndexA[0]][self.gridIndexA[1]][0]+1
+                # End my meddling
                 if(self.incubationLeft > 0): #assumes timesteps are small enough that overcounting is negligible
                     self.incubationLeft -= (time - self.time)
                 elif(self.infectionLeft > 0):
@@ -145,7 +151,7 @@ class Human(object):
 
 
 #simulation setup
-basePath = "C:/Users/Daniel/Downloads/Geolife Trajectories 1.3/Geolife Trajectories 1.3/Data" #path to the data of all humans
+basePath = r"Geolife Trajectories 1.3\Geolife Trajectories 1.3\Data" #path to the data of all humans
 humanPaths = os.listdir(basePath)
 humans = []
 for path in humanPaths:
@@ -169,10 +175,27 @@ while(currTime < startTime + length_of_sim * timestep_size):
             for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]]:
                 if h != transmitter:
                     h.infect()
-
+"""
 for row in gridA:
     print([[h.infected for h in cell] for cell in row])
 
 print([(h.lat, h.lon) for h in humans])
+# This section outputs a grid showing where everyone (infected or uninfected) is at the end of the sim, with their GPS coordinates.
+"""
 
-
+# This next section converts the raw risk score for each grid box to a linearly scaled score from 0-1.
+riskiest = 0
+for i in riskGrid:
+    for j in i:
+        for k in j:
+            if k > riskiest:
+                riskiest = k
+"""
+for i in riskGrid:
+    for j in i:
+        for k in j:
+            k = k/riskiest
+"""
+for i in riskGrid:
+    print(i)
+print(riskiest)
