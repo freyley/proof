@@ -1,14 +1,17 @@
 import os
 import random
+from math import ceil
 
-#Sim parameters
-length_of_sim = 10 #How many timesteps the simulation is.
-timestep_size = .00001157 #How long each timestep is (here, a second)
-grid_size = 300 #How many squares on a side the grid has.
-min_lat = 39 #lowest possible latitude
-max_lat = 40.6 #highest possible latitude
-min_lon = 116 #lowest possible longitude
-max_lon = 117 #highest possible longitude
+from graphics import *
+
+# Sim parameters
+length_of_sim = 10  # How many timesteps the simulation is.
+timestep_size = .00001157  # How long each timestep is (here, a second)
+grid_size = 300  # How many squares on a side the grid has.
+min_lat = 39  # Lowest possible latitude
+max_lat = 40.6  # Highest possible latitude
+min_lon = 116  # Lowest possible longitude
+max_lon = 117  # Highest possible longitude
 lat_step = (max_lat - min_lat)/grid_size #how much latitude a cell in the grid covers. The granularity of the grid determines the virus's spread distance.
 lon_step = (max_lon - min_lon)/grid_size #how much longitude a cell in the grid covers
 
@@ -118,9 +121,7 @@ class Human(object):
 
 
             if(self.infected):
-                # Start my meddling
-                riskGrid[self.gridIndexA[0]][self.gridIndexA[1]][0] = riskGrid[self.gridIndexA[0]][self.gridIndexA[1]][0]+1
-                # End my meddling
+                riskGrid[self.gridIndexA[0]][self.gridIndexA[1]][0] = riskGrid[self.gridIndexA[0]][self.gridIndexA[1]][0]+1 # This first line increments the risk map every time an infected human is in the grid square
                 if(self.incubationLeft > 0): #assumes timesteps are small enough that overcounting is negligible
                     self.incubationLeft -= (time - self.time)
                 elif(self.infectionLeft > 0):
@@ -149,32 +150,36 @@ class Human(object):
             self.infectionLeft = infection_duration
             self.incubationLeft = incubation_time
 
+def episimulation(n): # Sets up and triggers the simulation n times
+    for i in range(n):
+        #simulation setup
+        basePath = r"Geolife Trajectories 1.3\Geolife Trajectories 1.3\Data" #path to the data of all humans
+        humanPaths = os.listdir(basePath)
+        humans = []
+        for path in humanPaths:
+            humans.append(Human(basePath + "/" + path + "/" + "Trajectory"))
+            humans[len(humans) - 1].stepTo(humans[0].time) #start at the starting time of the first human.
+        currTime = humans[0].time
+        startTime = currTime
+        humans[int(len(humans) * random.random())].infect() #infect a human at random
 
-#simulation setup
-basePath = r"Geolife Trajectories 1.3\Geolife Trajectories 1.3\Data" #path to the data of all humans
-humanPaths = os.listdir(basePath)
-humans = []
-for path in humanPaths:
-    humans.append(Human(basePath + "/" + path + "/" + "Trajectory"))
-    humans[len(humans) - 1].stepTo(humans[0].time) #start at the starting time of the first human.
-currTime = humans[0].time
-startTime = currTime
-humans[int(len(humans) * random.random())].infect() #infect a human at random
 
 
+        #main simulation loop
+        while(currTime < startTime + length_of_sim * timestep_size):
+            currTime += timestep_size
+            [h.stepTo(currTime) for h in humans] #step to a specific time, decrementing timers accordingly
+            for transmitter in humans:
+                if transmitter.infected: #model spread of the virus to nearby humans
+                    for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
+                        if h != transmitter:
+                            h.infect()
+                    for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]]:
+                        if h != transmitter:
+                            h.infect()
 
-#main simulation loop
-while(currTime < startTime + length_of_sim * timestep_size):
-    currTime += timestep_size
-    [h.stepTo(currTime) for h in humans] #step to a specific time, decrementing timers accordingly
-    for transmitter in humans:
-        if transmitter.infected: #model spread of the virus to nearby humans
-            for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
-                if h != transmitter:
-                    h.infect()
-            for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]]:
-                if h != transmitter:
-                    h.infect()
+
+episimulation(1)  # Run the simulation n times, with the cumulative risk going into riskGrid
 """
 for row in gridA:
     print([[h.infected for h in cell] for cell in row])
@@ -183,19 +188,29 @@ print([(h.lat, h.lon) for h in humans])
 # This section outputs a grid showing where everyone (infected or uninfected) is at the end of the sim, with their GPS coordinates.
 """
 
-# This next section converts the raw risk score for each grid box to a linearly scaled score from 0-1.
+# This next section finds the highest risk score of any grid square.
 riskiest = 0
 for i in riskGrid:
     for j in i:
         for k in j:
             if k > riskiest:
                 riskiest = k
-"""
+
+# This part linearly scales the risk value from 0 to 255 (for easy colour conversion)
 for i in riskGrid:
     for j in i:
         for k in j:
-            k = k/riskiest
-"""
-for i in riskGrid:
-    print(i)
-print(riskiest)
+            k = ceil(k/(riskiest+1)*255)  # The +1 is to prevent division by 0
+            if k>0:
+                print(str(riskGrid.index(i))+","+str(i.index(j)))  # To show which pixels won't be blank
+
+# Graphics time!
+win = GraphWin("Risk Heatmap",grid_size,grid_size)  # Generates a grid with each grid square corresponding to a pixel
+
+for i in range(grid_size):  # Row
+    for j in range(grid_size):  # Column
+        for k in riskGrid[i][j]:  # Value
+            win.plot(i,j,color_rgb(k,k,k))  # I suspect this might need to be rotated 90*, but graphics.py has a function for that if needed.
+print("Done")
+win.getMouse()
+
