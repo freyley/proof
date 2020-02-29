@@ -4,9 +4,9 @@ import random
 #Sim parameters
 length_of_sim = 10 #How many timesteps the simulation is.
 timestep_size = .00001157 #How long each timestep is (here, a second)
-grid_size = 100 #How many squares on a side the grid has.
+grid_size = 300 #How many squares on a side the grid has.
 min_lat = 39 #lowest possible latitude
-max_lat = 41 #highest possible latitude
+max_lat = 40.6 #highest possible latitude
 min_lon = 116 #lowest possible longitude
 max_lon = 117 #highest possible longitude
 lat_step = (max_lat - min_lat)/grid_size #how much latitude a cell in the grid covers. The granularity of the grid determines the virus's spread distance.
@@ -145,7 +145,7 @@ class Human(object):
 
 
 #simulation setup
-basePath = "C:/Users/Daniel/Downloads/Geolife Trajectories 1.3/Geolife Trajectories 1.3/Data" #path to the data of all humans, edit for your own machine
+basePath = "C:/Users/Daniel/Downloads/Geolife Trajectories 1.3/Geolife Trajectories 1.3/Data" #path to the data of all humans
 humanPaths = os.listdir(basePath)
 humans = []
 for path in humanPaths:
@@ -170,8 +170,8 @@ while(currTime < startTime + length_of_sim * timestep_size):
                 if h != transmitter:
                     h.infect()
 
-
-print([[[h.infected for h in cell] for cell in row]for row in gridA])
+for row in gridA:
+    print([[h.infected for h in cell] for cell in row])
 
 
 
