@@ -103,7 +103,7 @@ class Human(object):
                 for i in range(6):
                     self.currTrajectory.readline()
                 posData = self.currTrajectory.readline()
-
+            posData = posData.split(",")
             self.lat = float(posData[0])
             self.lon = float(posData[1])
             self.alt = float(posData[3])
@@ -173,6 +173,6 @@ while(currTime < startTime + length_of_sim * timestep_size):
 for row in gridA:
     print([[h.infected for h in cell] for cell in row])
 
-
+print([(h.lat, h.lon) for h in humans])
 
 
