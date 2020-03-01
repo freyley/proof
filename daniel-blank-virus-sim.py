@@ -1,8 +1,13 @@
 import os
 import random
-from math import ceil
+import shutil
+import requests
+import math
+from PIL import Image, ImageOps
 
-from graphics import *
+# Four of the functions were taken from this guy:  enough that I feel I should give him at least some credit.
+# Author:   Klokan Petr Pridal, klokan at klokan dot cz
+# Web:      http://www.klokan.cz/projects/gdal2tiles/
 
 # Sim parameters
 length_of_sim = 10  # How many timesteps the simulation is.
@@ -187,7 +192,6 @@ episimulation(1)  # Run the simulation n times, with the cumulative risk going i
 """
 for row in gridA:
     print([[h.infected for h in cell] for cell in row])
-
 print([(h.lat, h.lon) for h in humans])
 # This section outputs a grid showing where everyone (infected or uninfected) is at the end of the sim, with their GPS coordinates.
 """
@@ -204,17 +208,97 @@ for i in riskGrid:
 for i in riskGrid:
     for j in i:
         for k in j:
-            k = ceil(k/(riskiest+1)*255)  # The +1 is to prevent division by 0
+            k = math.ceil(k/(riskiest+1)*255)  # The +1 is to prevent division by 0
             if k>0:
                 print(str(riskGrid.index(i))+","+str(i.index(j)))  # To show which pixels won't be blank
 
+url = "https://maps.googleapis.com/maps/api/staticmap?"
+# ^Requires center, zoom, and size parameters as as well as an API key.
+# If you don't have a copy of the key already, message me at rhys.a.fenwick@gmail.com.
+
+bbox = [[min_lat, min_lon], [max_lat, max_lon]]  # The lat/long coordinates of the box in order [[bottom, left], [top, right]]
+# Don't forget: negatives mean SW.  I'm sure there's a hot take in there somewhere about hemisphere bias.
+
+coords = [bbox[0], [bbox[0][0], bbox[1][1]], bbox[1], [bbox[1][0], bbox[0][1]]]  # SW\SE\NE\NW corners of the box
+
+originShift = 2 * math.pi * 6378137 / 2.0
+initialResolution = 2 * math.pi * 6378137 / 256
+
+def LatLonToMeters(lat, lon):
+    "Converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913"
+
+    mx = lon * originShift / 180.0
+    my = math.log(math.tan((90 + lat) * math.pi / 360.0)) / (math.pi / 180.0)
+
+    my = my * originShift / 180.0
+    return my, mx
+
+def MetersToLatLon(my, mx):
+    "Converts XY point from Spherical Mercator EPSG:3857 to lat/lon in WGS84 Datum"
+
+    lon = (mx / originShift) * 180.0
+    lat = (my / originShift) * 180.0
+
+    lat = 180 / math.pi * (2 * math.atan(math.exp(lat * math.pi / 180.0)) - math.pi / 2.0)
+    return lat, lon
+
+def Resolution(zoom):
+    "Resolution (meters/pixel) for given zoom level (measured at Equator)"
+
+    # return (2 * math.pi * 6378137) / (self.tileSize * 2**zoom)
+    return initialResolution / (2 ** zoom)
+
+def MetersToPixels(mx, my, zoom):
+    "Converts EPSG:900913 to pyramid pixel coordinates in given zoom level"
+
+    res = Resolution(zoom)
+    px = (mx + originShift) / res
+    py = (my + originShift) / res
+    return px, py
+
+for i in range(4):
+    coords[i] = LatLonToMeters(coords[i][0], coords[i][1])
+
+
+sides = [abs(coords[2][1] - coords[3][1]), abs(coords[1][0] - coords[2][0])]  # Top/Side side lengths in EPSG:3857 Coordinates.  Will always be a rectangle.
+longest_side = max(sides)  # This determines the zoom level we need
+avlat = (coords[2][0]+coords[1][0])/2
+avlon = (coords[2][1]+coords[3][1])/2
+center_coords = MetersToLatLon(avlat, avlon)  # Center point.  Unfortunately, GMaps needs this back as lat/long.
+center = str(center_coords[0])+","+str(center_coords[1])
+
+zoom = 0  # There's probably a more elegant way to work this out, but I'm lazy and this is the first that comes to mind.
+for i in range(30):
+    if Resolution(i)*640 > longest_side:
+        zoom = i
+
+# Now that we have zoom and center, we can finally grab the map section we want.
+gmap = requests.get(url, params={"size": "640x640", "scale": "2", "zoom": zoom, "center": center, "key": "Message Rhys"}, stream="True")
+# Note that a 640x640 image at x2 scale returns a 1280x1280 image.  That was a nightmare to figure out.
+mapname = "Final Heatmap.png"
+with open(mapname, 'wb') as f:
+    shutil.copyfileobj(gmap.raw, f)
+
+# Working out the size and scaling factor of the map section that we care about
+grid_width = sides[0]
+grid_height = sides[1]
+map_size = Resolution(zoom)
+section_height = grid_height/map_size
+section_width = grid_width/map_size
+map_scaling_height = section_height/grid_size
+map_scaling_width = section_width/grid_size
+
 # Graphics time!
-win = GraphWin("Risk Heatmap",grid_size,grid_size)  # Generates a grid with each grid square corresponding to a pixel
+img = Image.new('RGBA', (grid_size,grid_size), color=(255, 255, 255, 0))  # Sets up a grid the size of the simulation
+px = img.load()
+for i in range(grid_size):
+    for j in range(grid_size):
+        if riskGrid[i][j][0] != 0:
+            px[i, j] = ((255, riskGrid[i][j][0], riskGrid[i][j][0], 128))
+img.rotate(270)
+img = img.resize(size=(int(2*grid_size*map_scaling_width), int(2*grid_size*map_scaling_height)))
 
-for i in range(grid_size):  # Row
-    for j in range(grid_size):  # Column
-        for k in riskGrid[i][j]:  # Value
-            win.plot(i,j,color_rgb(k,k,k))  # I suspect this might need to be rotated 90*, but graphics.py has a function for that if needed.
-print("Done")
-win.getMouse()
-
+background = Image.open("Final Heatmap.png")
+background = ImageOps.fit(background, size=img.size)
+background.paste(img, (0,0), img)  # Pastes the two images together.
+background.save("Final Heatmap.png")
