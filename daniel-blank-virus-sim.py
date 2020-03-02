@@ -10,7 +10,7 @@ from PIL import Image, ImageOps
 # Web:      http://www.klokan.cz/projects/gdal2tiles/
 
 # Sim parameters
-length_of_sim = 10  # How many timesteps the simulation is.
+length_of_sim = 100  # How many timesteps the simulation is.
 timestep_size = .00001157  # How long each timestep is (here, a second)
 grid_size = 300  # How many squares on a side the grid has.
 min_lat = 39  # Lowest possible latitude
@@ -188,7 +188,7 @@ def episimulation(n): # Sets up and triggers the simulation n times
                             h.infect()
 
 
-episimulation(1)  # Run the simulation n times, with the cumulative risk going into riskGrid
+episimulation(10)  # Run the simulation n times, with the cumulative risk going into riskGrid
 """
 for row in gridA:
     print([[h.infected for h in cell] for cell in row])
@@ -196,21 +196,19 @@ print([(h.lat, h.lon) for h in humans])
 # This section outputs a grid showing where everyone (infected or uninfected) is at the end of the sim, with their GPS coordinates.
 """
 
-# This next section finds the highest risk score of any grid square.
+# This next section finds the highest risk score of any grid square and converts them to log10
 riskiest = 0
-for i in riskGrid:
-    for j in i:
-        for k in j:
-            if k > riskiest:
-                riskiest = k
+for i in range(grid_size):
+    for j in range(grid_size):
+        if riskGrid[i][j][0] > 0:
+            riskGrid[i][j][0] = math.log10(riskGrid[i][j][0])
+            if riskGrid[i][j][0] > riskiest:
+                riskiest = riskGrid[i][j][0]
 
 # This part linearly scales the risk value from 0 to 255 (for easy colour conversion)
-for i in riskGrid:
-    for j in i:
-        for k in j:
-            k = math.ceil(k/(riskiest+1)*255)  # The +1 is to prevent division by 0
-            if k>0:
-                print(str(riskGrid.index(i))+","+str(i.index(j)))  # To show which pixels won't be blank
+for i in range(grid_size):
+    for j in range(grid_size):
+        riskGrid[i][j][0] = int(riskGrid[i][j][0]/(riskiest+1)*255)
 
 url = "https://maps.googleapis.com/maps/api/staticmap?"
 # ^Requires center, zoom, and size parameters as as well as an API key.
@@ -219,7 +217,7 @@ url = "https://maps.googleapis.com/maps/api/staticmap?"
 bbox = [[min_lat, min_lon], [max_lat, max_lon]]  # The lat/long coordinates of the box in order [[bottom, left], [top, right]]
 # Don't forget: negatives mean SW.  I'm sure there's a hot take in there somewhere about hemisphere bias.
 
-coords = [bbox[0], [bbox[0][0], bbox[1][1]], bbox[1], [bbox[1][0], bbox[0][1]]]  # SW\SE\NE\NW corners of the box
+coords = [bbox[0], [bbox[0][0], bbox[1][1]], bbox[1], [bbox[1][0], bbox[0][1]]]  # Four corners of the box
 
 originShift = 2 * math.pi * 6378137 / 2.0
 initialResolution = 2 * math.pi * 6378137 / 256
@@ -275,7 +273,7 @@ for i in range(30):
 # Now that we have zoom and center, we can finally grab the map section we want.
 gmap = requests.get(url, params={"size": "640x640", "scale": "2", "zoom": zoom, "center": center, "key": "Message Rhys"}, stream="True")
 # Note that a 640x640 image at x2 scale returns a 1280x1280 image.  That was a nightmare to figure out.
-mapname = "Final Heatmap.png"
+mapname = "Initial Map.png"
 with open(mapname, 'wb') as f:
     shutil.copyfileobj(gmap.raw, f)
 
@@ -295,10 +293,9 @@ for i in range(grid_size):
     for j in range(grid_size):
         if riskGrid[i][j][0] != 0:
             px[i, j] = ((255, riskGrid[i][j][0], riskGrid[i][j][0], 128))
-img.rotate(270)
+img = img.rotate(90)
 img = img.resize(size=(int(2*grid_size*map_scaling_width), int(2*grid_size*map_scaling_height)))
 
-background = Image.open("Final Heatmap.png")
+background = Image.open("Initial Map.png").convert("RGBA")
 background = ImageOps.fit(background, size=img.size)
-background.paste(img, (0,0), img)  # Pastes the two images together.
-background.save("Final Heatmap.png")
+Image.alpha_composite(background, img).save("Final Heatmap.png")
