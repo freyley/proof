@@ -4,6 +4,7 @@ import shutil
 import requests
 import math
 from PIL import Image, ImageOps
+from pyproj import Proj, transform
 
 # Four of the functions were taken from this guy:  enough that I feel I should give him at least some credit.
 # Author:   Klokan Petr Pridal, klokan at klokan dot cz
@@ -188,7 +189,7 @@ def episimulation(n): # Sets up and triggers the simulation n times
                             h.infect()
 
 
-episimulation(10)  # Run the simulation n times, with the cumulative risk going into riskGrid
+episimulation(1)  # Run the simulation n times, with the cumulative risk going into riskGrid
 """
 for row in gridA:
     print([[h.infected for h in cell] for cell in row])
@@ -219,25 +220,19 @@ bbox = [[min_lat, min_lon], [max_lat, max_lon]]  # The lat/long coordinates of t
 
 coords = [bbox[0], [bbox[0][0], bbox[1][1]], bbox[1], [bbox[1][0], bbox[0][1]]]  # Four corners of the box
 
-originShift = 2 * math.pi * 6378137 / 2.0
+originShift = math.pi * 6378137
 initialResolution = 2 * math.pi * 6378137 / 256
+P4326 = Proj("EPSG:4326")
+P3857 = Proj("EPSG:3857")
 
 def LatLonToMeters(lat, lon):
     "Converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913"
+    x, y = transform(P4326, P3857, lat, lon)
+    return y, x
 
-    mx = lon * originShift / 180.0
-    my = math.log(math.tan((90 + lat) * math.pi / 360.0)) / (math.pi / 180.0)
-
-    my = my * originShift / 180.0
-    return my, mx
-
-def MetersToLatLon(my, mx):
+def MetersToLatLon(y, x):
     "Converts XY point from Spherical Mercator EPSG:3857 to lat/lon in WGS84 Datum"
-
-    lon = (mx / originShift) * 180.0
-    lat = (my / originShift) * 180.0
-
-    lat = 180 / math.pi * (2 * math.atan(math.exp(lat * math.pi / 180.0)) - math.pi / 2.0)
+    lat, lon = transform(P3857, P4326, x, y)
     return lat, lon
 
 def Resolution(zoom):
@@ -257,8 +252,9 @@ def MetersToPixels(mx, my, zoom):
 for i in range(4):
     coords[i] = LatLonToMeters(coords[i][0], coords[i][1])
 
-
+print(coords)
 sides = [abs(coords[2][1] - coords[3][1]), abs(coords[1][0] - coords[2][0])]  # Top/Side side lengths in EPSG:3857 Coordinates.  Will always be a rectangle.
+print(sides)
 longest_side = max(sides)  # This determines the zoom level we need
 avlat = (coords[2][0]+coords[1][0])/2
 avlon = (coords[2][1]+coords[3][1])/2
@@ -271,7 +267,7 @@ for i in range(30):
         zoom = i
 
 # Now that we have zoom and center, we can finally grab the map section we want.
-gmap = requests.get(url, params={"size": "640x640", "scale": "2", "zoom": zoom, "center": center, "key": "Message Rhys"}, stream="True")
+gmap = requests.get(url, params={"size": "640x640", "scale": "2", "zoom": zoom, "center": center, "key": "Ask Rhys"}, stream="True")
 # Note that a 640x640 image at x2 scale returns a 1280x1280 image.  That was a nightmare to figure out.
 mapname = "Initial Map.png"
 with open(mapname, 'wb') as f:
