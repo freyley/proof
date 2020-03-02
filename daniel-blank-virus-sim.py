@@ -292,10 +292,10 @@ px = img.load()
 for i in range(grid_size):
     for j in range(grid_size):
         if riskGrid[i][j][0] != 0:
-            px[i, j] = ((255, riskGrid[i][j][0], riskGrid[i][j][0], 128))
-img = img.rotate(90)
+            px[j, i] = ((255, riskGrid[i][j][0], riskGrid[i][j][0], 128))
 img = img.resize(size=(int(2*grid_size*map_scaling_width), int(2*grid_size*map_scaling_height)))
+img = ImageOps.flip(img)  # To account for the fact that the image measures y-values from the top.
 
 background = Image.open("Initial Map.png").convert("RGBA")
-background = ImageOps.fit(background, size=img.size)
+background = ImageOps.fit(background, size=img.size, centering=(0.5, 0.5))
 Image.alpha_composite(background, img).save("Final Heatmap.png")
