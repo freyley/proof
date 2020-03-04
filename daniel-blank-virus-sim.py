@@ -101,6 +101,7 @@ class Human(object):
         self.gridIndexA, self.gridIndexB = gridify(self.lat, self.lon)
         gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
         gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
+        self.age = random.normalvariate(37, 15) #Average age 37, stddev age 15. Edit as necessary; will be populated from demographic data if it is present.
 
 
     def stepTo(self, time): #find this person's position at the given time. Time has been discretized, with timestep parameters set globally above.
@@ -137,7 +138,7 @@ class Human(object):
                 elif(self.infectionLeft > 0):
                     self.infectionLeft -= (time - self.time)
                 else:
-                    if random.random() < fatality_rate:
+                    if random.random() < fatality_rate * self.age/37: #Older people are more likely to die from the virus; here age is just a linear factor; may want to adjust that.
                         self.alive = False
                         gridA[self.gridIndexA[0]][self.gridIndexA[1]].remove(self)
                         gridB[self.gridIndexB[0]][self.gridIndexB[1]].remove(self)
@@ -163,7 +164,8 @@ class Human(object):
 def episimulation(n): # Sets up and triggers the simulation n times
     for i in range(n):
         #simulation setup
-        basePath = r"Geolife Trajectories 1.3\Geolife Trajectories 1.3\Data" #path to the data of all humans
+        basePath = "C:/Users/Daniel/Downloads/Geolife Trajectories 1.3/Geolife Trajectories 1.3/Data" #path to the data of all humans
+        #basePath = r"Geolife Trajectories 1.3\Geolife Trajectories 1.3\Data" #path to the data of all humans
         humanPaths = os.listdir(basePath)
         humans = []
         for path in humanPaths:
@@ -182,14 +184,15 @@ def episimulation(n): # Sets up and triggers the simulation n times
             for transmitter in humans:
                 if transmitter.infected and transmitter.incubationLeft <= 0: #model spread of the virus to nearby humans
                     for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
-                        if h != transmitter:
+                        if h != transmitter and random.random() > transmitter.age/200: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
                             h.infect()
                     for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]]:
-                        if h != transmitter:
+                        if h != transmitter and random.random() > transmitter.age/200:
                             h.infect()
 
 
 episimulation(1)  # Run the simulation n times, with the cumulative risk going into riskGrid
+
 """
 for row in gridA:
     print([[h.infected for h in cell] for cell in row])
