@@ -1,0 +1,20 @@
+{
+  "name": "geolife-spatiotemporal-heatmap",
+  "version": "1.0.0",
+  "description": "Proof-of-concept app that renders Microsoft Research&#39;s Geolife data over time",
+  "author": "Mikhail Voloshin",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "nuxt": "^2.0.0",
+    "@nuxtjs/axios": "^5.3.6"
+  },
+  "devDependencies": {
+    "@nuxtjs/vuetify": "^1.0.0"
+  }
+}
