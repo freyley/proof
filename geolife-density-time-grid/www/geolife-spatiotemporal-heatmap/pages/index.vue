@@ -25,7 +25,7 @@
             <GmapMap
               ref="mapRef"
               v-if="isDataLoaded"
-              :center="{lat:10, lng:10}"
+              :center="{lat:40, lng:116.3}"
               :zoom="7"
               map-type-id="terrain"
               style="width: 100%; height: 100%"
@@ -45,9 +45,9 @@
             {{dataLoadTimeEnd.getTime() - dataLoadTimeStart.getTime()}} ms
           </v-alert>
 
-          <v-btn @click="panToSingapore">
-            Pan to Singapore
-          </v-btn>
+          <div>
+            <div class="font-weight-light font-italic">{{currentTimestepDateObj}}</div>
+          </div>
         </v-card-actions>
       </v-card>
 
@@ -66,6 +66,7 @@
 </style>
 
 <script>
+
 export default {
   components: {
   },
@@ -79,10 +80,51 @@ export default {
       dataLoadTimeStart: null,
       dataLoadTimeEnd: null,
 
-      googleMapObject: null
+      googleMapObject: null,
+
+      timeSeriesHeatMapData: null,
+      heatmapRange: 0,
+      currentTimestepIndex: 0
     }
   },
 
+  computed: {
+    currentTimestepObj() {
+      if (!this.timeSeriesHeatMapData ||
+          !this.timeSeriesHeatMapData[this.currentTimestepIndex]) {
+        return null;
+      }
+      return this.timeSeriesHeatMapData[this.currentTimestepIndex];
+    },
+
+    currentTimestepDateObj() {
+      if (!this.currentTimestepObj) {
+        return null;
+      }
+      return new Date(this.currentTimestepObj[0]);
+    },
+
+    currentTimestepPoints() {
+      if (!this.currentTimestepObj) {
+        return [];
+      }
+      const pointsByWeight = this.currentTimestepObj[1];
+      const pointsUnpacked = pointsByWeight.reduce( (accumulator, arrWeight) => {
+        const weight = arrWeight[0];
+        const arrPointsWithWeight = arrWeight[1];
+        const arrPtObjs = arrPointsWithWeight.map(arrPt => {
+          return {
+            lat: arrPt[0],
+            lng: arrPt[1],
+            weight
+          };
+        });
+        return accumulator.concat(arrPtObjs);
+      }, []);
+      return pointsUnpacked;
+    }
+
+  },
 
   methods: {
     loadData() {
@@ -92,39 +134,55 @@ export default {
       this.isDataLoaded = false;
       this.errorMsg = null;
 
+      this.timeSeriesHeatMapData = null;
+      this.heatmapRange = 0;
+      this.currentTimestepIndex = 0;
 
       this.$axios.get('./data/time_series_sparse_geospatial_tallies.json')
-          .then(data => {
-            console.log('DATA SUCCESS')
-          })
-          .catch(err => {
-            console.log(err);
-          })
+        .then(data => {
+          this.isDataLoaded = true;
+          this.dataLoadTimeEnd = new Date();
 
-      setTimeout(() => {
-        this.isDataLoaded = true;
-        this.isDataLoading = false;
-        this.dataLoadTimeEnd = new Date();
+          this.heatmapRange = data.data.ranges.tally;
+          this.timeSeriesHeatMapData = data.data.timeseries;
 
-
-        // We have to do this silly timeout trick because we can't
-        // grab a reference to the mapRef element because it doesn't
-        // exist yet because the v-if hasn't processed yet.
-        // And we can't make it exist before the v-if because there's
-        // a bug in the component that throws an annoying DOM error.
-        setTimeout(() => {
-          this.$refs.mapRef.$mapPromise.then((map) => {
-            this.googleMapObject = map;
-          })
-        }, 0);
-      }, 500);
+          // We have to do this silly timeout trick because we can't
+          // grab a reference to the mapRef element because it doesn't
+          // exist yet because the v-if hasn't processed yet.
+          // And we can't make it exist before the v-if because there's
+          // a bug in the component that throws an annoying DOM error.
+          setTimeout(() => {
+            this.$refs.mapRef.$mapPromise.then((map) => {
+              this.googleMapObject = map;
+              this.updateCurrentIndexHeatmap();
+            })
+          }, 0);
+        })
+        .catch(err => {
+          this.errorMsg = err.message || JSON.stringify(err);
+        })
+        .finally( () => {
+          this.isDataLoading = false;
+        });
     },
 
-    panToSingapore() {
-      if (!this.googleMapObject) {
+    updateCurrentIndexHeatmap() {
+      if (!this.googleMapObject || !this.currentTimestepObj) {
         return;
       }
-      this.googleMapObject.panTo({lat: 1.38, lng: 103.80})
+
+      const srcPts = this.currentTimestepPoints;
+      const heatMapData = srcPts.map(srcPt => {
+        return {
+          location: new google.maps.LatLng(srcPt.lat, srcPt.lng),
+          weight: srcPt.weight
+        };
+      });
+
+      const heatmap = new google.maps.visualization.HeatmapLayer({
+        data: heatMapData
+      });
+      heatmap.setMap(this.googleMapObject);
     }
   }
 }
