@@ -92,16 +92,26 @@ export default {
       this.isDataLoaded = false;
       this.errorMsg = null;
 
-      // We have to do this silly timeout trick because we can't
-      // grab a reference to the mapRef element because it doesn't
-      // exist yet because the v-if hasn't processed yet.
-      // And we can't make it exist before the v-if because there's
-      // a bug in the component that throws an annoying DOM error.
+
+      this.$axios.get('./data/time_series_sparse_geospatial_tallies.json')
+          .then(data => {
+            console.log('DATA SUCCESS')
+          })
+          .catch(err => {
+            console.log(err);
+          })
+
       setTimeout(() => {
         this.isDataLoaded = true;
         this.isDataLoading = false;
         this.dataLoadTimeEnd = new Date();
 
+
+        // We have to do this silly timeout trick because we can't
+        // grab a reference to the mapRef element because it doesn't
+        // exist yet because the v-if hasn't processed yet.
+        // And we can't make it exist before the v-if because there's
+        // a bug in the component that throws an annoying DOM error.
         setTimeout(() => {
           this.$refs.mapRef.$mapPromise.then((map) => {
             this.googleMapObject = map;
