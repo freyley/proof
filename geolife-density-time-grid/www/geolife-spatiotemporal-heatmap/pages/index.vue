@@ -45,9 +45,35 @@
             {{dataLoadTimeEnd.getTime() - dataLoadTimeStart.getTime()}} ms
           </v-alert>
 
-          <div>
-            <div class="font-weight-light font-italic">{{currentTimestepDateObj}}</div>
-          </div>
+          <v-container class="column ml-2" v-if="isDataLoaded">
+            <v-row class="font-weight-light font-italic">{{currentTimestepDateObj}}</v-row>
+
+            <v-row>
+              <v-slider
+                v-model="currentTimestepIndex"
+                min="0"
+                :max="numTimesteps"
+              ></v-slider>
+
+              <v-btn fab small class="mx-1" color="primary"
+                  v-if="!isPlaying"
+                  @click="isPlaying=true; play()">
+                <v-icon>mdi-play</v-icon>
+              </v-btn>
+              <v-btn fab small class="mx-1" color="primary"
+                  v-if="!isPlaying"
+                  @click="currentTimestepIndex++; currentTimestepIndex%=numTimesteps">
+                <v-icon>mdi-play-pause</v-icon>
+              </v-btn>
+              <v-btn fab small class="mx-1" color="primary"
+                  v-if="isPlaying"
+                  @click="isPlaying=false">
+                <v-icon>mdi-stop</v-icon>
+              </v-btn>
+
+            </v-row>
+
+          </v-container>
         </v-card-actions>
       </v-card>
 
@@ -86,6 +112,9 @@ export default {
       heatmapRange: 0,
       currentTimestepIndex: 0,
 
+      currentHeatmapDataPoints: null,
+      isPlaying: false,
+
       mapInitCenter: {
         lat: 40,
         lng: -100
@@ -94,6 +123,13 @@ export default {
   },
 
   computed: {
+    numTimesteps() {
+      if (!this.timeSeriesHeatMapData) {
+        return 0;
+      }
+      return this.timeSeriesHeatMapData.length;
+    },
+
     currentTimestepObj() {
       if (!this.timeSeriesHeatMapData ||
           !this.timeSeriesHeatMapData[this.currentTimestepIndex]) {
@@ -106,7 +142,7 @@ export default {
       if (!this.currentTimestepObj) {
         return null;
       }
-      return new Date(this.currentTimestepObj[0]);
+      return new Date(this.currentTimestepObj[0] * 1000);
     },
 
     currentTimestepPoints() {
@@ -128,7 +164,6 @@ export default {
       }, []);
       return pointsUnpacked;
     }
-
   },
 
   methods: {
@@ -190,11 +225,36 @@ export default {
           weight: srcPt.weight
         };
       });
+      if (this.currentHeatmapDataPoints) {
+        // Clear the last pile of data points, if they exist.
+        // https://stackoverflow.com/questions/25699643/delete-heat-map-for-refreshing
+        this.currentHeatmapDataPoints.clear();
+      }
+      this.currentHeatmapDataPoints = new google.maps.MVCArray(heatMapData);
 
       const heatmap = new google.maps.visualization.HeatmapLayer({
-        data: heatMapData
+        data: this.currentHeatmapDataPoints
       });
       heatmap.setMap(this.googleMapObject);
+    },
+
+    play() {
+      if (!this.isPlaying) {
+        return;
+      }
+
+      this.currentTimestepIndex++;
+      this.currentTimestepIndex %= this.numTimesteps;
+
+      setTimeout(() => {
+        this.play();
+      }, 500);
+    }
+  },
+
+  watch: {
+    currentTimestepIndex(value) {
+      this.updateCurrentIndexHeatmap();
     }
   }
 }
