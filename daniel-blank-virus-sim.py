@@ -15,11 +15,12 @@ length_of_sim = 100  # How many timesteps the simulation is.
 timestep_size = .00001157  # How long each timestep is (here, a second)
 grid_size = 300  # How many squares on a side the grid has.
 min_lat = 39  # Lowest possible latitude
-max_lat = 40.6  # Highest possible latitude
 min_lon = 116  # Lowest possible longitude
-max_lon = 117  # Highest possible longitude
-lat_step = (max_lat - min_lat)/grid_size #how much latitude a cell in the grid covers. The granularity of the grid determines the virus's spread distance.
-lon_step = (max_lon - min_lon)/grid_size #how much longitude a cell in the grid covers
+lat_step = 90/10800 #how much latitude a cell in the grid covers. Now fixed by the NASA dataset.
+lon_step = 90/10800 #how much longitude a cell in the grid covers
+max_lat = min_lat + grid_size * lat_step  # Highest possible latitude
+max_lon = min_lon + grid_size * lon_step  # Highest possible longitude
+density_to_humans = 200 # Conversion factor between population density in the NASA dataset and how many humans the model generates
 
 
 #Virus parameters:
@@ -44,6 +45,55 @@ for i in range(grid_size):
         gridA[i].append([]) #each cell in the grid is a (possibly empty) list of humans.
         gridB[i].append([])
         riskGrid[i].append([0])
+
+"""
+This function finds the chunk, line, and entry where a latitude and longitude occur in the NASA dataset.
+Used to ind the window in which the simulation is set.
+"""
+def LatLonToChunkLineEntry(lat, lon):
+    if lat > 0:
+        if lon > 0:
+            if lon > 90:
+                chunk = 3
+                entry = (lon - 90) // lon_step
+            else:
+                chunk = 2
+                entry = lon // lon_step
+
+        else:
+            if lon > -90:
+                chunk = 1
+                entry = -(-180 - (lon + 90)) // lon_step
+            else:
+                chunk = 0
+                entry = - (-90 - lon) // lon_step
+        line = (90 - lat) // lat_step
+
+    else:
+        if lon > 0:
+            if lon > 90:
+                chunk = 7
+                entry = (lon - 90) // lon_step
+            else:
+                chunk = 6
+                entry = lon // lon_step
+        else:
+            if lon > -90:
+                chunk = 5
+                entry = -(-180 - (lon + 90)) // lon_step
+            else:
+                chunk = 4
+                entry = - (-90 - lon) // lon_step
+        line = -lat // lat_step
+
+    return (chunk, line, entry)
+
+
+
+
+
+
+
 
 """
 This function takes a latitude and longitude, and converts it to two sets of two grid indices, one per grid, which it returns.
@@ -80,27 +130,33 @@ TODO: possibly have humans carry probabilities of infection? How do you implemen
 """
 class Human(object):
 
-    def __init__(self, filepath):
+    def __init__(self, filepath=None, gridIndexA=None, gridIndexB = None):
         self.filepath = filepath
         self.infected = False #Humans start healthy
         self.incubationLeft = -1
         self.infectionLeft = -1
-        self.trajectories = [filepath + "/" + traj for traj in os.listdir(filepath)] #all this human's trajectories
-        self.trajectories.sort() #hopefully the timestamps sort to chronological order
-        self.trajectoryIterator = iter(self.trajectories)
-        self.currTrajectory = open(next(self.trajectoryIterator))
-        for i in range(6):
-            self.currTrajectory.readline()
-        self.posData = self.currTrajectory.readline().split(",")
-        self.lat = float(self.posData[0])
-        self.lon = float(self.posData[1])
-        self.alt = float(self.posData[3])
-        self.time = float(self.posData[4])
+        if self.filepath != None:
+            self.trajectories = [filepath + "/" + traj for traj in os.listdir(filepath)] #all this human's trajectories
+            self.trajectories.sort() #hopefully the timestamps sort to chronological order
+            self.trajectoryIterator = iter(self.trajectories)
+            self.currTrajectory = open(next(self.trajectoryIterator))
+            for i in range(6):
+                self.currTrajectory.readline()
+            self.posData = self.currTrajectory.readline().split(",")
+            self.lat = float(self.posData[0])
+            self.lon = float(self.posData[1])
+            self.alt = float(self.posData[3])
+            self.time = float(self.posData[4])
+            self.gridIndexA, self.gridIndexB = gridify(self.lat, self.lon)
+        else: #stationary human, no trajectories
+            self.gridIndexA = gridIndexA
+            self.gridIndexB = gridIndexB
+            gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
+            gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
+            self.time = 0
+
         self.alive = True
         self.immune = False
-        self.gridIndexA, self.gridIndexB = gridify(self.lat, self.lon)
-        gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
-        gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
         self.age = random.normalvariate(37, 15) #Average age 37, stddev age 15. Edit as necessary; will be populated from demographic data if it is present.
 
 
@@ -108,28 +164,30 @@ class Human(object):
         if(not self.alive):
             return
         while(time > self.time):
-            gridA[self.gridIndexA[0]][self.gridIndexA[1]].remove(self)
-            gridB[self.gridIndexB[0]][self.gridIndexB[1]].remove(self)
-            posData = self.currTrajectory.readline()
-            if(posData == ""): #finished this trajectory. Going to next one.
-                nextTrajectoryPath = next(self.trajectoryIterator, None)
-                if(nextTrajectoryPath == None):
-                    self.alive = False
-                    return # end of all trajectories. Tentatively, this human simply disappears off the face of the earth.
-                self.currTrajectory = open(nextTrajectoryPath)
-                for i in range(6):
-                    self.currTrajectory.readline()
+            if self.filepath != None:
+                gridA[self.gridIndexA[0]][self.gridIndexA[1]].remove(self)
+                gridB[self.gridIndexB[0]][self.gridIndexB[1]].remove(self)
                 posData = self.currTrajectory.readline()
-            posData = posData.split(",")
-            self.lat = float(posData[0])
-            self.lon = float(posData[1])
-            self.alt = float(posData[3])
-            self.time = float(posData[4])
-            self.posData = posData
-            self.gridIndexA, self.gridIndexB = gridify(self.lat, self.lon)
-            gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
-            gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
-
+                if(posData == ""): #finished this trajectory. Going to next one.
+                    nextTrajectoryPath = next(self.trajectoryIterator, None)
+                    if(nextTrajectoryPath == None):
+                        self.alive = False
+                        return # end of all trajectories. Tentatively, this human simply disappears off the face of the earth.
+                    self.currTrajectory = open(nextTrajectoryPath)
+                    for i in range(6):
+                        self.currTrajectory.readline()
+                    posData = self.currTrajectory.readline()
+                posData = posData.split(",")
+                self.lat = float(posData[0])
+                self.lon = float(posData[1])
+                self.alt = float(posData[3])
+                self.time = float(posData[4])
+                self.posData = posData
+                self.gridIndexA, self.gridIndexB = gridify(self.lat, self.lon)
+                gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
+                gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
+            else:
+                self.time = time
 
             if(self.infected):
                 riskGrid[self.gridIndexA[0]][self.gridIndexA[1]][0] = riskGrid[self.gridIndexA[0]][self.gridIndexA[1]][0]+1 # This first line increments the risk map every time an infected human is in the grid square
@@ -153,7 +211,7 @@ class Human(object):
 
 
 
-            self.time = time
+
 
     def infect(self):
         if(self.alive and not self.infected):
@@ -166,6 +224,36 @@ def episimulation(n): # Sets up and triggers the simulation n times
         #simulation setup
         basePath = "C:/Users/Daniel/Downloads/Geolife Trajectories 1.3/Geolife Trajectories 1.3/Data" #path to the data of all humans
         #basePath = r"Geolife Trajectories 1.3\Geolife Trajectories 1.3\Data" #path to the data of all humans
+
+
+        # initially populate gridA with stationary humans.
+        popDensityPath = "path to population density files."  # path to NASA dataset
+        startChunk, startLine, startEntry = LatLonToChunkLineEntry(min_lat, min_lon)
+        popDensityFiles = [popDensityPath + filepath for filepath in os.listdir(popDensityPath) if
+                           filepath[len(filepath ) - 4:] == "asc"]  # find all the asc data in the dataset directory
+        startFile = open(popDensityFiles[startChunk])
+        for i in range(4 + startLine): # skip 4 header lines
+            startFile.readline()
+        for i in range(grid_size):  # currently only supports the whole grid being in one chunk.
+            currLine = startFile.readline()
+            densities = currLine.split(" ")
+            for j in range(startEntry, startEntry + grid_size):
+                numHumans = float(densities[j]) // density_to_humans #convert densities to number of humans. Might want a nonlinear function instead.
+                gridIndexA = [i, j]
+                gridIndexB = [i, j]
+                for k in range(numHumans):
+                    Human(None, gridIndexA, gridIndexB)
+                    if gridIndexB[0] == i:
+                        if gridIndexB[1] == j:
+                            gridIndexB = [i, j + 1]
+                        else:
+                            gridIndexB = [i + 1, j + 1]
+                    else:
+                        if gridIndexB[1] == j:
+                            gridIndexB = [i, j]
+                        else:
+                            gridIndexB = [i + 1, j]
+
         humanPaths = os.listdir(basePath)
         humans = []
         for path in humanPaths:
