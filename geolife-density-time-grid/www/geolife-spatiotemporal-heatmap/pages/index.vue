@@ -178,7 +178,7 @@ export default {
       this.heatmapRange = 0;
       this.currentTimestepIndex = 0;
 
-      this.$axios.get('./data/time_series_sparse_geospatial_tallies.json')
+      this.$axios.get('data/time_series_sparse_geospatial_tallies.json')
         .then(data => {
           this.isDataLoaded = true;
           this.dataLoadTimeEnd = new Date();
