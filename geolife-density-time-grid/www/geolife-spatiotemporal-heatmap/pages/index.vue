@@ -25,9 +25,9 @@
             <GmapMap
               ref="mapRef"
               v-if="isDataLoaded"
-              :center="{lat:40, lng:116.3}"
-              :zoom="7"
-              map-type-id="terrain"
+              :center="mapInitCenter"
+              :zoom="8"
+              map-type-id="roadmap"
               style="width: 100%; height: 100%"
             >
             </GmapMap>
@@ -84,7 +84,12 @@ export default {
 
       timeSeriesHeatMapData: null,
       heatmapRange: 0,
-      currentTimestepIndex: 0
+      currentTimestepIndex: 0,
+
+      mapInitCenter: {
+        lat: 40,
+        lng: -100
+      }
     }
   },
 
@@ -155,6 +160,13 @@ export default {
             this.$refs.mapRef.$mapPromise.then((map) => {
               this.googleMapObject = map;
               this.updateCurrentIndexHeatmap();
+
+              if (this.currentTimestepPoints &&
+                  this.currentTimestepPoints.length) {
+                // Instantly zoom to the biggest blob in timestep 0.
+                this.mapInitCenter.lat = this.currentTimestepPoints[0].lat;
+                this.mapInitCenter.lng = this.currentTimestepPoints[0].lng;
+              }
             })
           }, 0);
         })
