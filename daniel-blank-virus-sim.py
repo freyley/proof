@@ -67,7 +67,7 @@ def LatLonToChunkLineEntry(lat, lon):
             else:
                 chunk = 0
                 entry = - (-90 - lon) // lon_step
-        line = (90 - lat) // lat_step
+        line = int((90 - lat) // lat_step)
 
     else:
         if lon > 0:
@@ -84,8 +84,8 @@ def LatLonToChunkLineEntry(lat, lon):
             else:
                 chunk = 4
                 entry = - (-90 - lon) // lon_step
-        line = -lat // lat_step
-
+        line = int(-lat // lat_step)
+    entry = int(entry)
     return (chunk, line, entry)
 
 
@@ -110,6 +110,8 @@ def gridify(lat, lon):
         latIndexB = int((lat - (min_lat - .5 * lat_step)) / lat_step)
         if latIndexB >= grid_size:
             latIndexB = grid_size - 1
+        if latIndexA >= grid_size:
+            latIndexA = grid_size - 1
     if lon < min_lon:
         lonIndexA = 0
         lonIndexB = 0
@@ -121,6 +123,8 @@ def gridify(lat, lon):
         lonIndexB = int((lon - (min_lon - .5 * lon_step)) / lon_step)
         if lonIndexB >= grid_size:
             lonIndexB = grid_size - 1
+        if lonIndexA >= grid_size:
+            lonIndexA = grid_size - 1
     return ((latIndexA, lonIndexA), (latIndexB, lonIndexB))
 
 """
@@ -151,10 +155,9 @@ class Human(object):
         else: #stationary human, no trajectories
             self.gridIndexA = gridIndexA
             self.gridIndexB = gridIndexB
-            gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
-            gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
             self.time = 0
-
+        gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
+        gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
         self.alive = True
         self.immune = False
         self.age = random.normalvariate(37, 15) #Average age 37, stddev age 15. Edit as necessary; will be populated from demographic data if it is present.
@@ -184,6 +187,8 @@ class Human(object):
                 self.time = float(posData[4])
                 self.posData = posData
                 self.gridIndexA, self.gridIndexB = gridify(self.lat, self.lon)
+                if(self.gridIndexA[0] not in range(grid_size)):
+                    print(self.gridIndexA)
                 gridA[self.gridIndexA[0]][self.gridIndexA[1]].append(self)
                 gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
             else:
@@ -227,10 +232,10 @@ def episimulation(n): # Sets up and triggers the simulation n times
 
 
         # initially populate gridA with stationary humans.
-        popDensityPath = "path to population density files."  # path to NASA dataset
+        popDensityPath = "C:/Users/Daniel/Downloads/gpw-v4-population-count-rev11_2020_30_sec_asc"  # path to NASA dataset
         startChunk, startLine, startEntry = LatLonToChunkLineEntry(min_lat, min_lon)
-        popDensityFiles = [popDensityPath + filepath for filepath in os.listdir(popDensityPath) if
-                           filepath[len(filepath ) - 4:] == "asc"]  # find all the asc data in the dataset directory
+        popDensityFiles = [popDensityPath + "/" +  filepath for filepath in os.listdir(popDensityPath) if
+                           filepath[len(filepath ) - 4:] == ".asc"]  # find all the asc data in the dataset directory
         startFile = open(popDensityFiles[startChunk])
         for i in range(4 + startLine): # skip 4 header lines
             startFile.readline()
@@ -238,9 +243,9 @@ def episimulation(n): # Sets up and triggers the simulation n times
             currLine = startFile.readline()
             densities = currLine.split(" ")
             for j in range(startEntry, startEntry + grid_size):
-                numHumans = float(densities[j]) // density_to_humans #convert densities to number of humans. Might want a nonlinear function instead.
-                gridIndexA = [i, j]
-                gridIndexB = [i, j]
+                numHumans = min(0, int(float(densities[j]) // density_to_humans)) #convert densities to number of humans. Might want a nonlinear function instead.
+                gridIndexA = [i, j - startEntry]
+                gridIndexB = [i, j - startEntry]
                 for k in range(numHumans):
                     Human(None, gridIndexA, gridIndexB)
                     if gridIndexB[0] == i:
@@ -253,6 +258,7 @@ def episimulation(n): # Sets up and triggers the simulation n times
                             gridIndexB = [i, j]
                         else:
                             gridIndexB = [i + 1, j]
+
 
         humanPaths = os.listdir(basePath)
         humans = []
