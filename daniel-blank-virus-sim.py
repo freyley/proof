@@ -252,7 +252,7 @@ class Human(object):
     def checkForSickness(self):
         for randId in db:
             if randId in self.history:
-                self.infected = True
+                self.infect()
                 return
         #TODO: check the database for any random ID in this human's history.
 
