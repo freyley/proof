@@ -22,7 +22,8 @@ max_lat = min_lat + grid_size * lat_step  # Highest possible latitude
 max_lon = min_lon + grid_size * lon_step  # Highest possible longitude
 density_to_humans = 200 # Conversion factor between population density in the NASA dataset and how many humans the model generates
 db = [] #database of interactions between humans where one was CDC-confirmed infected.
-
+transmission_prob_close = .22 #Probability a Bluetooth interaction transmits the virus.
+transmission_prob_far = .01 #Probability a human in the same square catches the virus from a confirmed case.
 #Virus parameters:
 
 spread_prob = .22 #Probability that someone within the infection distance and time of someone infected catches the virus themselves.
@@ -137,6 +138,7 @@ class Human(object):
     def __init__(self, filepath=None, gridIndexA=None, gridIndexB = None):
         self.filepath = filepath
         self.infected = False #Humans start healthy. TODO: maybe differentiate between those who are infected with CDC codes and those who are exposed and likely to catch the virus?
+        self.prob = 0
         self.incubationLeft = -1
         self.infectionLeft = -1
         self.cdcCode = None # Those who are infected and have a CDC code are certain to be infected, rather than simply likely to carry the disease by exposure.
@@ -211,8 +213,10 @@ class Human(object):
                     if random.random() < immunity:
                         self.immune = True
                         self.infected = False
+                        self.prob = 0
                     else:
                         self.infected = False
+                        self.prob = 0
                         self.incubationLeft = -1
                         self.infectionLeft = -1
 
@@ -225,6 +229,7 @@ class Human(object):
             self.cdcCode = cdcCode
         if cdcCode != None:
             pass
+            self.prob = 1
             db.extend(self.history)
             # TODO: push history to database; see Bluetooth team
         if(self.alive and not self.infected):
@@ -234,17 +239,16 @@ class Human(object):
 
 
     def interact(self, other): # log a bluetooth interaction between two humans.
-        prob = .22
-        if self.cdcCode != None or other.cdcCode != None:
-            prob = 1
-        if self.infected and random.random() < prob:
+        if self.infected and random.random():
             other.infect()
-        if other.infected and random.random() < prob:
+            other.prob += transmission_prob_close * self.prob
+        if other.infected and random.random:
             self.infect()
+            self.prob += transmission_prob_close * other.prob
         if self.infected: #TODO: should we infect everyone in the square, like I'm doing now, or something else?
             for h in gridA[self.gridIndexA[0]][self.gridIndexA[1]] + gridB[self.gridIndexB[0]][self.gridIndexB[1]]:
-                if random.random() < .05: #arbitrary pobability of catching it from the exposed
-                    h.infect()
+                h.infect()
+                h.prob += transmission_prob_far * self.prob #TODO: do we need those dice rolls then?
         randId = random.randint()
         self.history.append(randId)
         other.history.append(randId)
@@ -253,6 +257,7 @@ class Human(object):
         for randId in db:
             if randId in self.history:
                 self.infect()
+                self.prob = transmission_prob_close #TODO: do we want a global transmission prob?
                 return
         #TODO: check the database for any random ID in this human's history.
 
