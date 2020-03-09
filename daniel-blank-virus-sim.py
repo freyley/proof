@@ -295,11 +295,14 @@ def episimulation(n): # Sets up and triggers the simulation n times
             [h.stepTo(currTime) for h in humans] #step to a specific time, decrementing timers accordingly
             for transmitter in humans:
                 if transmitter.infected and transmitter.incubationLeft <= 0: #model spread of the virus to nearby humans
+                    prob = .22 #probability of the transmitter actually being infected. TODO: model this better to account for multiple steps?
+                    if transmitter.cdcCode != None:
+                        prob = 1
                     for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
-                        if h != transmitter and random.random() > transmitter.age/200: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
+                        if h != transmitter and random.random() > transmitter.age/200 and random.random() < prob: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
                             h.interact(transmitter) #TODO: do we want the interactions to happen like this?
                     for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]]:
-                        if h != transmitter and random.random() > transmitter.age/200:
+                        if h != transmitter and random.random() > transmitter.age/200 and random.random() < prob:
                             h.interact(transmitter)
 
 
