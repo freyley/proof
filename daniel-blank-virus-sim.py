@@ -21,7 +21,7 @@ lon_step = 90/10800 #how much longitude a cell in the grid covers
 max_lat = min_lat + grid_size * lat_step  # Highest possible latitude
 max_lon = min_lon + grid_size * lon_step  # Highest possible longitude
 density_to_humans = 200 # Conversion factor between population density in the NASA dataset and how many humans the model generates
-
+db = [] #database of interactions between humans where one was CDC-confirmed infected.
 
 #Virus parameters:
 
@@ -225,6 +225,7 @@ class Human(object):
             self.cdcCode = cdcCode
         if cdcCode != None:
             pass
+            db.extend(self.history)
             # TODO: push history to database; see Bluetooth team
         if(self.alive and not self.infected):
             self.infected = True
@@ -249,7 +250,10 @@ class Human(object):
         other.history.append(randId)
 
     def checkForSickness(self):
-        pass
+        for randId in db:
+            if randId in self.history:
+                self.infected = True
+                return
         #TODO: check the database for any random ID in this human's history.
 
 
