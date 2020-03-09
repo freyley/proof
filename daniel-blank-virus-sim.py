@@ -223,11 +223,14 @@ class Human(object):
     def infect(self, cdcCode = None):
         if self.cdcCode == None:
             self.cdcCode = cdcCode
+        if cdcCode != None:
+            pass
+            # TODO: push history to database; see Bluetooth team
         if(self.alive and not self.infected):
             self.infected = True
             self.infectionLeft = infection_duration
             self.incubationLeft = incubation_time
-            #TODO: push history to database; see Bluetooth team
+
 
     def interact(self, other): # log a bluetooth interaction between two humans.
         prob = .22
@@ -243,6 +246,10 @@ class Human(object):
         randId = random.randint()
         self.history.append(randId)
         other.history.append(randId)
+
+    def checkForSickness(self):
+        pass
+        #TODO: check the database for any random ID in this human's history.
 
 
 def episimulation(n): # Sets up and triggers the simulation n times
@@ -288,7 +295,7 @@ def episimulation(n): # Sets up and triggers the simulation n times
             humans[len(humans) - 1].stepTo(humans[0].time) #start at the starting time of the first human.
         currTime = humans[0].time
         startTime = currTime
-        humans[int(len(humans) * random.random())].infect() #infect a human at random
+        humans[int(len(humans) * random.random())].infect(42) #infect a human at random, and confirm with a CDC code.
 
 
 
