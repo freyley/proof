@@ -242,7 +242,8 @@ class Human(object):
             self.infect()
         if self.infected: #TODO: should we infect everyone in the square, like I'm doing now, or something else?
             for h in gridA[self.gridIndexA[0]][self.gridIndexA[1]] + gridB[self.gridIndexB[0]][self.gridIndexB[1]]:
-                h.infect()
+                if random.random() < .05: #arbitrary pobability of catching it from the exposed
+                    h.infect()
         randId = random.randint()
         self.history.append(randId)
         other.history.append(randId)
