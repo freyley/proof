@@ -139,6 +139,7 @@ class Human(object):
         self.infected = False #Humans start healthy. TODO: maybe differentiate between those who are infected with CDC codes and those who are exposed and likely to catch the virus?
         self.incubationLeft = -1
         self.infectionLeft = -1
+        self.cdcCode = None # Those who are infected and have a CDC code are certain to be infected, rather than simply likely to carry the disease by exposure.
         self.history = [] #history of Bluetooth interactions. Might want to store some other way.
         if self.filepath != None:
             self.trajectories = [filepath + "/" + traj for traj in os.listdir(filepath)] #all this human's trajectories
@@ -220,6 +221,8 @@ class Human(object):
 
 
     def infect(self, cdcCode = None):
+        if self.cdcCode == None:
+            self.cdcCode = cdcCode
         if(self.alive and not self.infected):
             self.infected = True
             self.infectionLeft = infection_duration
@@ -294,7 +297,7 @@ def episimulation(n): # Sets up and triggers the simulation n times
                 if transmitter.infected and transmitter.incubationLeft <= 0: #model spread of the virus to nearby humans
                     for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
                         if h != transmitter and random.random() > transmitter.age/200: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
-                            h.interact(transmitter)
+                            h.interact(transmitter) #TODO: do we want the interactions to happen like this?
                     for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]]:
                         if h != transmitter and random.random() > transmitter.age/200:
                             h.interact(transmitter)
@@ -379,7 +382,7 @@ for i in range(30):
         zoom = i
 
 # Now that we have zoom and center, we can finally grab the map section we want.
-gmap = requests.get(url, params={"size": "640x640", "scale": "2", "zoom": zoom, "center": center, "key": "AIzaSyCM_kiyqxmgV2yr3Hmb03whDaO1UDoxA9w"}, stream="True")
+gmap = requests.get(url, params={"size": "640x640", "scale": "2", "zoom": zoom, "center": center, "key": "Ask Rhys"}, stream="True")
 # Note that a 640x640 image at x2 scale returns a 1280x1280 image.  That was a nightmare to figure out.
 mapname = "Initial Map.png"
 with open(mapname, 'wb') as f:
