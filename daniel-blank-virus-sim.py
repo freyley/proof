@@ -230,9 +230,12 @@ class Human(object):
             #TODO: push history to database; see Bluetooth team
 
     def interact(self, other): # log a bluetooth interaction between two humans.
-        if self.infected:
+        prob = .22
+        if self.cdcCode != None or other.cdcCode != None:
+            prob = 1
+        if self.infected and random.random() < prob:
             other.infect()
-        if other.infected:
+        if other.infected and random.random() < prob:
             self.infect()
         if self.infected: #TODO: should we infect everyone in the square, like I'm doing now, or something else?
             for h in gridA[self.gridIndexA[0]][self.gridIndexA[1]] + gridB[self.gridIndexB[0]][self.gridIndexB[1]]:
