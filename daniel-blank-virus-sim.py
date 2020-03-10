@@ -255,6 +255,7 @@ class Human(object):
             return #quarantined humans are isolated.
         if self.infected and self.incubationLeft <= 0:
             other.infect()
+            #TODO: should we have a separate probability counter marking what app users know of their exposure?
             other.prob += transmission_prob_close * self.prob
             if other.usingApp and self.usingApp and other.prob > quarantine_threshold:
                 other.quarantined = True
