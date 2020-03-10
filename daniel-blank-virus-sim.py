@@ -337,8 +337,8 @@ def episimulation(n): # Sets up and triggers the simulation n times
                     for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
                         if h != transmitter and random.random() > transmitter.age/200 and random.random() < contact_rate: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
                             h.interact(transmitter) #TODO: do we want the interactions to happen like this?
-                    for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]] and random.random() < contact_rate:
-                        if h != transmitter and random.random() > transmitter.age/200:
+                    for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]] :
+                        if h != transmitter and random.random() > transmitter.age/200 and random.random() < contact_rate:
                             h.interact(transmitter)
 
 
