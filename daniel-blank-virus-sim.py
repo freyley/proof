@@ -24,6 +24,7 @@ density_to_humans = 200 # Conversion factor between population density in the NA
 db = [] #database of interactions between humans where one was CDC-confirmed infected.
 transmission_prob_close = .22 #Probability a Bluetooth interaction transmits the virus.
 transmission_prob_far = .01 #Probability a human in the same square catches the virus from a confirmed case.
+quarantine_threshold = .1 #Probability at which a user of the app quarantines themselves, isolating themselves from all other humans.
 #Virus parameters:
 
 spread_prob = .22 #Probability that someone within the infection distance and time of someone infected catches the virus themselves.
@@ -139,6 +140,7 @@ class Human(object):
         self.filepath = filepath
         self.infected = False #Humans start healthy. TODO: maybe differentiate between those who are infected with CDC codes and those who are exposed and likely to catch the virus?
         self.prob = 0
+        self.usingApp = False
         self.incubationLeft = -1
         self.infectionLeft = -1
         self.cdcCode = None # Those who are infected and have a CDC code are certain to be infected, rather than simply likely to carry the disease by exposure.
@@ -164,6 +166,7 @@ class Human(object):
         gridB[self.gridIndexB[0]][self.gridIndexB[1]].append(self)
         self.alive = True
         self.immune = False
+        self.quarantined = False #users of the app quarantine themselves if their probability exceeds a certain threshold.
         self.age = random.normalvariate(37, 15) #Average age 37, stddev age 15. Edit as necessary; will be populated from demographic data if it is present.
 
 
@@ -230,7 +233,9 @@ class Human(object):
         if cdcCode != None:
             pass
             self.prob = 1
-            db.extend(self.history)
+            if self.usingApp:
+                db.extend(self.history)
+                self.quarantined = True
             # TODO: push history to database; see Bluetooth team
         if(self.alive and not self.infected):
             self.infected = True
@@ -245,25 +250,32 @@ class Human(object):
 
 
     def interact(self, other): # log a bluetooth interaction between two humans.
+        if self.quarantined or other.quarantined:
+            return #quarantined humans are isolated.
         if self.infected and self.incubationLeft <= 0:
             other.infect()
             other.prob += transmission_prob_close * self.prob
+            if other.usingApp and self.usingApp and other.prob > quarantine_threshold:
+                other.quarantined = True
         if other.infected and other.incubationLeft <= 0:
             self.infect()
             self.prob += transmission_prob_close * other.prob
+            if other.usingApp and self.usingApp and self.prob > quarantine_threshold:
+                self.quarantined = True
         if self.infected and self.incubationLeft <= 0: #TODO: should we infect everyone in the square, like I'm doing now, or something else?
             for h in gridA[self.gridIndexA[0]][self.gridIndexA[1]] + gridB[self.gridIndexB[0]][self.gridIndexB[1]]:
                 h.infect()
                 h.prob += transmission_prob_far * self.prob #TODO: do we need those dice rolls then?
-        randId = random.randint()
-        self.history.append(randId)
-        other.history.append(randId)
+        if self.usingApp and other.usingApp:
+            randId = random.randint()
+            self.history.append(randId)
+            other.history.append(randId)
 
     def checkForSickness(self):
         for randId in db:
             if randId in self.history:
                 self.infect()
-                self.prob = transmission_prob_close #TODO: do we want a global transmission prob?
+                self.prob += transmission_prob_close #TODO: do we want a global transmission prob?
                 return
         #TODO: check the database for any random ID in this human's history.
 
