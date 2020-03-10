@@ -25,6 +25,7 @@ db = [] #database of interactions between humans where one was CDC-confirmed inf
 transmission_prob_close = .22 #Probability a Bluetooth interaction transmits the virus.
 transmission_prob_far = .01 #Probability a human in the same square catches the virus from a confirmed case.
 quarantine_threshold = .1 #Probability at which a user of the app quarantines themselves, isolating themselves from all other humans.
+contact_rate = .2 #Probability that a human comes in contact with another if they are both in the same square.
 #Virus parameters:
 
 spread_prob = .22 #Probability that someone within the infection distance and time of someone infected catches the virus themselves.
@@ -334,9 +335,9 @@ def episimulation(n): # Sets up and triggers the simulation n times
             for transmitter in humans:
                 if transmitter.infected and transmitter.incubationLeft <= 0: #model spread of the virus to nearby humans
                     for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
-                        if h != transmitter and random.random() > transmitter.age/200: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
+                        if h != transmitter and random.random() > transmitter.age/200 and random.random() < contact_rate: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
                             h.interact(transmitter) #TODO: do we want the interactions to happen like this?
-                    for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]]:
+                    for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]] and random.random() < contact_rate:
                         if h != transmitter and random.random() > transmitter.age/200:
                             h.interact(transmitter)
 
