@@ -224,7 +224,7 @@ class Human(object):
 
 
 
-    def infect(self, cdcCode = None):
+    def infect(self, cdcCode = None, startTime = None):
         if self.cdcCode == None:
             self.cdcCode = cdcCode
         if cdcCode != None:
@@ -236,16 +236,22 @@ class Human(object):
             self.infected = True
             self.infectionLeft = infection_duration
             self.incubationLeft = incubation_time
+            if startTime != None:
+                if self.time - startTime < incubation_time:
+                    self.incubationLeft -= (self.time - startTime)
+                else:
+                    self.incubationLeft = 0
+                    self.infectionLeft -= (self.time - startTime - incubation_time)
 
 
     def interact(self, other): # log a bluetooth interaction between two humans.
-        if self.infected and random.random():
+        if self.infected and self.incubationLeft <= 0:
             other.infect()
             other.prob += transmission_prob_close * self.prob
-        if other.infected and random.random:
+        if other.infected and other.incubationLeft <= 0:
             self.infect()
             self.prob += transmission_prob_close * other.prob
-        if self.infected: #TODO: should we infect everyone in the square, like I'm doing now, or something else?
+        if self.infected and self.incubationLeft <= 0: #TODO: should we infect everyone in the square, like I'm doing now, or something else?
             for h in gridA[self.gridIndexA[0]][self.gridIndexA[1]] + gridB[self.gridIndexB[0]][self.gridIndexB[1]]:
                 h.infect()
                 h.prob += transmission_prob_far * self.prob #TODO: do we need those dice rolls then?
@@ -315,14 +321,11 @@ def episimulation(n): # Sets up and triggers the simulation n times
             [h.stepTo(currTime) for h in humans] #step to a specific time, decrementing timers accordingly
             for transmitter in humans:
                 if transmitter.infected and transmitter.incubationLeft <= 0: #model spread of the virus to nearby humans
-                    prob = .22 #probability of the transmitter actually being infected. TODO: model this better to account for multiple steps?
-                    if transmitter.cdcCode != None:
-                        prob = 1
                     for h in gridA[transmitter.gridIndexA[0]][transmitter.gridIndexA[1]]:
-                        if h != transmitter and random.random() > transmitter.age/200 and random.random() < prob: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
+                        if h != transmitter and random.random() > transmitter.age/200: #Younger people spread the virus more easily. Again, a linear factor on the spread probability, might want something else.
                             h.interact(transmitter) #TODO: do we want the interactions to happen like this?
                     for h in gridB[transmitter.gridIndexB[0]][transmitter.gridIndexB[1]]:
-                        if h != transmitter and random.random() > transmitter.age/200 and random.random() < prob:
+                        if h != transmitter and random.random() > transmitter.age/200:
                             h.interact(transmitter)
 
 
