@@ -2,14 +2,22 @@ import requests
 
 
 def placefinder(lat, lon):
-    url1 = "https://geo.fcc.gov/api/census/area?"
-    url2 = "https://www.naccho.org/membership/lhd-directory?"
-    place = requests.get(url1, params={"lat": lat, "lon": lon})  # In decimal degrees
+    url = "https://geo.fcc.gov/api/census/area?"
+    place = requests.get(url, params={"lat": lat, "lon": lon})  # In decimal degrees
     pfacts = place.text.split(",")
-    cname = pfacts[8].split(":")[1].strip('"')
-    cstate = pfacts[10].split(":")[1].strip('"')
-    contact = requests.get(url2, params={"searchType": "standard", "lhd-search": cname, "lhd-state": cstate})  # Returns NACCHO county result
-    num = contact.text.split("Phone:")[2].split("tel:")[1].split('">')[0]  # This is an abomination but it works
-    return cname, cstate, num  # County name, state, and the local health authority phone number
+    fips = pfacts[7].split(":")[1].strip('"')
+    f = open("Counties.txt", "r")
+    clist = f.read().split("\n")
+    dlist = []
+    for i in clist:
+        dlist.append(i.split(","))
+    for i in dlist:
+        if i[0] == str(fips):
+            print("It looks like you're in "+i[1]+", "+i[2]+".")
+            if i[3] == "!NONUM":
+                print("Unfortunately we can't seem to find the phone number for your local health authority.")
+            else:
+                print("The phone number for your local health authority is"+i[3]+".")
+
 
 placefinder(34, -111)  # Hard-coded in the coords for Gila, AZ as a test.
