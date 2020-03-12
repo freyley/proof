@@ -1,6 +1,6 @@
 <template>
   <v-layout>
-    Yaytayya
+    {{$store.getters['params/list']}}
   </v-layout>
 </template>
 

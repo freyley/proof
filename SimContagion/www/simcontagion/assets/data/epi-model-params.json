@@ -3,7 +3,7 @@
     "key": "NUM_HOUSEHOLDS",
     "name": "Number of households",
     "description": "This determines how many total households are simulated.",
-    "integer": true,
+    "valuetype": "integer",
     "range_min": 5,
     "range_max": 500,
     "default": 50
@@ -12,37 +12,37 @@
     "key": "HOUSEHOLD_TYPE_DISTRIBUTION__PROB_FAMILY",
     "name": "Probability of family",
     "description": "This is the probability that a generated household is a family unit.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.44,
-    "probability_distribution": "HOUSEHOLD_TYPE_DISTRIBUTION"
+    "probability_distribution_group": "HOUSEHOLD_TYPE_DISTRIBUTION"
   },
   {
     "key": "HOUSEHOLD_TYPE_DISTRIBUTION__PROB_ROOMMATES",
   	"name": "Probability of roommates",
     "description": "This is the probability that a generated household contains roommates.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.44,
-    "probability_distribution": "HOUSEHOLD_TYPE_DISTRIBUTION"
+    "probability_distribution_group": "HOUSEHOLD_TYPE_DISTRIBUTION"
   },
   {
     "key": "HOUSEHOLD_TYPE_DISTRIBUTION__PROB_NURSING_HOME",
     "name": "Probability of nursing home",
     "description": "This is the probability that a generated household is a nursing home.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.12,
-    "probability_distribution": "HOUSEHOLD_TYPE_DISTRIBUTION"
+    "probability_distribution_group": "HOUSEHOLD_TYPE_DISTRIBUTION"
   },
   {
     "key": "PROB_FAMILY_SINGLE_PARENT",
     "name": "Probability of single parent",
     "description": "This is the probability that a given family unit has a single parent.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.3
@@ -51,7 +51,7 @@
     "key": "PROB_LIVE_IN_GRANDPARENT",
     "name": "Probability of live-in grandparent",
     "description": "This is the probability that a given family unit has a grandparent living with them.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.3
@@ -60,7 +60,7 @@
     "key": "MEAN_CHILDBEARING_AGE",
     "name": "Mean childbearing age",
     "description": "This determines the average age at which people have children.",
-  	"integer": true,
+  	"valuetype": "integer",
     "range_min": 19,
     "range_max": 64,
     "default": 35
@@ -69,7 +69,7 @@
     "key": "NUM_CHILDREN_PER_HOUSEHOLD",
     "name": "Average number of children per household",
     "description": "If a household has children, this is the number of children they will have on average.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 10,
     "default": 2
@@ -78,7 +78,7 @@
     "key": "PROB_FAMILY_SUBURBAN",
     "name": "Probability of suburban family",
     "description": "This is the probability that a given family unit is located in the suburbs, rather than the city.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.4
@@ -87,7 +87,7 @@
     "key": "MEAN_NUM_ROOMMATES",
     "name": "Average number of roommates",
     "description": "In a household that contains roommates, this is the average number of roommates in it.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 1,
     "range_max": 10,
     "default": 3
@@ -96,7 +96,7 @@
     "key": "MEAN_NUM_NURSING_HOME_RESIDENTS",
     "name": "Average number of nursing home residents",
     "description": "In nursing homes, this determines the average number of residents.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 11,
     "range_max": 200,
     "default": 30
@@ -105,7 +105,7 @@
     "key": "MEAN_NURSING_HOME_AGE",
     "name": "Average nursing home age",
     "description": "This is the average age of a nursing home resident.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 65,
     "range_max": 100,
     "default": 72
@@ -114,7 +114,7 @@
     "key": "MEAN_NUM_FRIENDS",
     "name": "Average number of friends",
     "description": "This determines the average number of friends a sim has.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 30,
     "default": 15
@@ -123,7 +123,7 @@
     "key": "PROB_SOCIAL_OUTGOING",
     "name": "Probabilty of going out",
     "description": "This is the probability that the average 25 year old sim goes out to socialize; it is lowered based on how far a sim's age is from 25.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.5
@@ -132,7 +132,7 @@
     "key": "PROB_SOCIAL_VENUE",
     "name": "Probability of public venue",
     "description": "If a sim goes out to socialize, this is the probability, on average, that they will go to a public venue",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.4
@@ -141,7 +141,7 @@
     "key": "PROB_UNEMPLOYED",
     "name": "Probability",
     "description": "This is the probability  that a sim age 18-64 is unemployed.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.05
@@ -150,7 +150,7 @@
     "key": "MEAN_SCHOOL_SIZE",
     "name": "Average school size",
     "description": "This is the average number of students in a school.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 51,
     "range_max": 500,
     "default": 75
@@ -159,7 +159,7 @@
     "key": "MEAN_SCHOOL_CLASS_SIZE",
     "name": "Average class size",
     "description": "This is the average size of a class in schools.",
-    "integer": false,
+    "valuetype": "float",
 	  "range_min": 5,
     "range_max": 50,
     "default": 10
@@ -168,37 +168,37 @@
     "key": "WORKPLACE_TYPE_DISTRIBUTION__PROB_WORKPLACE_TYPE_OFFICE",
     "name": "Probability of office workplace",
     "description": "When a workplace is generated, this is the probability that it is an office.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.34,
-    "probability_distribution": "WORKPLACE_TYPE_DISTRIBUTION"
+    "probability_distribution_group": "WORKPLACE_TYPE_DISTRIBUTION"
   },
   {
     "key": "WORKPLACE_TYPE_DISTRIBUTION__PROB_WORKPLACE_TYPE_RETAIL",
     "name": "Probability of retail workplace",
     "description": "When a workplace is generated, this is the probability that it is a retail establishment.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.33,
-    "probability_distribution": "WORKPLACE_TYPE_DISTRIBUTION"
+    "probability_distribution_group": "WORKPLACE_TYPE_DISTRIBUTION"
   },
   {
     "key": "WORKPLACE_TYPE_DISTRIBUTION__PROB_WORKPLACE_TYPE_FOOD",
     "name": "Probability of food workplace",
     "description": "When a workplace is generated, this is the probability that it is a food establishment.",
-  	"integer": false,
+  	"valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.33,
-    "probability_distribution": "WORKPLACE_TYPE_DISTRIBUTION"
+    "probability_distribution_group": "WORKPLACE_TYPE_DISTRIBUTION"
   },
   {
     "key": "MEAN_OFFICE_STAFF",
     "name": "Average office staff",
     "description": "This determines the average number of employees at an office.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 6,
     "range_max": 60,
     "default": 32
@@ -207,7 +207,7 @@
     "key": "MEAN_RETAIL_STAFF",
     "name": "Average retail staff",
     "description": "This determines the average number of employees at a retail establishment.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 6,
     "range_max": 40,
     "default": 20
@@ -216,7 +216,7 @@
     "key": "MEAN_FOOD_STAFF",
     "name": "Average food staff",
     "description": "This determines the average number of employees at a food establishment.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 6,
     "range_max": 30,
     "default": 13
@@ -225,7 +225,7 @@
     "key": "PROB_MASS_TRANSIT_COMMUTER",
     "name": "Probability of mass transit",
     "description": "This is the probability that a human takes mass transit to and from work.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.5
@@ -234,7 +234,7 @@
     "key": "MEAN_AGE_APP_INSTALLED",
     "name": "Average age of app installation",
     "description": "This determines the average age at which sims install the app. App installation peaks at this age.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 4,
     "range_max": 120,
     "default": 30
@@ -243,7 +243,7 @@
     "key": "PROB_APP_INSTALLED",
     "name": "Probability of app installation",
     "description": "This is the probability that a human of the average age of installation installs the app.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.6
@@ -252,7 +252,7 @@
     "key": "STDDEV_AGE_APP_INSTALLED",
     "name": "Standard deviation of app installation age",
     "description": "This is the standard deviation of the adoption rate of the app based on age. Increasing this means a wider variety of ages are likely to install the app.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 100,
     "default": 5
@@ -261,7 +261,7 @@
     "key": "PROB_LUNCH_OUT",
     "name": "Probability of eating lunch out",
     "description": "This is the probability that a sim that is not in a nursing home, hospitalized, or self-quarantining eats their lunch out.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.5
@@ -270,7 +270,7 @@
     "key": "PROB_SHOPPING",
     "name": "Probability of shopping",
     "description": "This is the probability that a sim that is not in a nursing home or hospitalized goes shopping on a given afternoon.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.07
@@ -279,7 +279,7 @@
     "key": "PROB_CONTAMINATION_DECAY_HOUSEHOLD",
     "name": "Household probability of decontamination",
     "description": "This is the probability that a contaminated household ceases to be contaminated at the end of a day.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -288,7 +288,7 @@
     "key": "PROB_CONTAMINATION_DECAY_NURSING_HOME",
     "name": "Nursing home probability of decontamination",
     "description": "This is the probability that a contaminated nursing home ceases to be contaminated at the end of a day.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -297,7 +297,7 @@
     "key": "PROB_CONTAMINATION_DECAY_SCHOOL",
     "name": "School probability of decontamination",
     "description": "This is the probability that a contaminated school ceases to be contaminated at the end of a day.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -306,7 +306,7 @@
     "key": "PROB_CONTAMINATION_DECAY_OFFICE",
     "name": "Office probability of decontamination",
     "description": "This is the probability that a contaminated office ceases to be contaminated at the end of a day.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -315,7 +315,7 @@
     "key": "PROB_CONTAMINATION_DECAY_RETAIL",
     "name": "Retail establishment probability of decontamination",
     "description": "This is the probability that a contaminated retail establishment ceases to be contaminated at the end of a day.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -324,7 +324,7 @@
     "key": "PROB_CONTAMINATION_DECAY_FOOD",
     "name": "Food establishment probability of decontamination",
     "description": "This is the probability that a contaminated food establishment ceases to be contaminated at the end of a day.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -333,7 +333,7 @@
     "key": "PROB_SHOPPING_SELF_QUARANTINED",
     "name": "Probability of shopping when self-quarantining",
     "description": "This is the probability that a self-quarantining sim goes shopping on a given afternoon.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.04
@@ -342,7 +342,7 @@
     "key": "SELF_QUARANTINE_PUBLIC_TRANSMISSIVENESS_MODULATION",
     "name": "Transmissiveness modulation from self-quarantining",
     "description": "This is the factor by which transmissiveness is reduced when a sim self-quarantines.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -351,7 +351,7 @@
     "key": "PROB_CATCH_FROM_LOCATION",
     "name": "Probability of catching virus from location",
     "description": "This is the probability that a sim in prolonged contact with a contaminated location catches the virus.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.05
@@ -360,7 +360,7 @@
     "key": "PROB_CATCH_FROM_INFECTEE",
     "name": "Probability of catching virus from infectee",
     "description": "This is the probability that a sim in prolonged contact with a contagious infectee catches the virus. Less likely if the infectee is self-quarantining.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -369,7 +369,7 @@
     "key": "PROB_CONTAMINATE",
     "name": "Probability of contaminating location",
     "description": "This is the probability that a contagious infectee in prolonged contact with a location contaminates it.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -378,7 +378,7 @@
     "key": "CASUAL_CONTACT_TRANSMISSIVENESS_MODULATION",
     "name": "Transmissiveness modulation from casual contact",
     "description": "This is the factor by which transmissiveness is reduced if contact between sims and/or locations is casual rather than prolonged.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.1
@@ -387,7 +387,7 @@
     "key": "MEAN_INFECTION_LATENCY_DURATION",
     "name": "Average latency duration of infection",
     "description": "This is the average time, in days, that the virus remains latent in a sim once they catch it. It is asymptomatic and not contagious in this state.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 30,
     "default": 14
@@ -396,7 +396,7 @@
     "key": "PROB_ASYMPTOMATIC_INFECTION",
     "name": "Probability of asymptomatic infection",
     "description": "This is the probability that a sim who catches the virus at age 0 is asymptomatic once the virus leaves its latent state.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.6
@@ -405,7 +405,7 @@
     "key": "MEAN_INFECTION_ASYMPTOMATIC_DURATION",
     "name": "Average asymptomatic duration of infection",
     "description": "This is the average length, in days, of the asymptomatic state of the virus. Once it ends, the infectee may recover or get sick.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 3,
     "range_max": 30,
     "default": 7
@@ -414,7 +414,7 @@
     "key": "PROB_ASYMPTOMATIC_RECOVERY",
     "name": "Probability of recovering from asymptomatic infection",
     "description": "This is the probability that a sim recovers from the asymptomatic state of the infection, rather than getting sick.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.5
@@ -423,7 +423,7 @@
     "key": "BOOL_REINFECTION",
     "name": "Toggle reinfection after recovery",
     "description": "When this is enabled, sims that have recovered from the virus can be infected again.",
-    "integer": true,
+    "valuetype": "integer",
     "range_min": 0,
     "range_max": 1,
     "default": 0
@@ -432,7 +432,7 @@
     "key": "MEAN_INFECTION_SICKNESS_DURATION",
     "name": "Average sickness duration of infection",
     "description": "This is the average time that a sim with the virus is sick. When it ends, the sim either recovers or enters critical condition.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 3,
     "range_max": 30,
     "default": 14
@@ -441,7 +441,7 @@
     "key": "PROB_COMPLICATIONS_AGE_50",
     "name": "Probability of complications at age 50",
     "description": "This is the probability that a sim experiences complications after sickness at age 50. For sims aged below 50, it linearly increases from 0 to this value.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.2
@@ -450,7 +450,7 @@
     "key": "PROB_COMPLICATIONS_AGE_90",
     "name": "Probability of complications at age 90",
     "description": "This is the probability that a sim experiences complications after sickness at age 90. For sims aged 50-90, it linearly increases to this value.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.9
@@ -459,7 +459,7 @@
     "key": "MEAN_INFECTION_CRITICAL_DURATION",
     "name": "Average critical duration of infection",
     "description": "This is the average time that a sim with the virus is in critical condition. When it ends, the sim either recovers or dies.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 3,
     "range_max": 30,
     "default": 7
@@ -468,7 +468,7 @@
     "key": "PROB_CRITICAL_MORTALITY",
     "name": "Mortality of critical condition",
     "description": "This is the probability that a sim in critical condition dies when it ends.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.3
@@ -477,7 +477,7 @@
     "key": "PROB_APP_RECORD_CONTACT",
     "name": "Probability of app recording contact",
     "description": "This is the probability that, if two app users are in prolonged contact, the app records it successfully.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.94
@@ -486,7 +486,7 @@
     "key": "MEAN_INFECTION_SICKNESS_DURATION",
     "name": "Average sickness duration of infection",
     "description": "This is the average time that a sim with the virus is sick. When it ends, the sim either recovers or enters critical condition.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 3,
     "range_max": 30,
     "default": 14
@@ -495,7 +495,7 @@
     "key": "PROB_SICK_SELF_QUARANTINE",
     "name": "Probability of self-quarantining when sick",
     "description": "This is the probability that a sick sim self-quarantines. Sims in critical condition are always quarantined.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.4
@@ -504,7 +504,7 @@
     "key": "PROB_SICK_SEEK_DIAGNOSIS",
     "name": "Probability of seeking diagnosis when sick",
     "description": "This is the probability that a sick sim seeks diagnosis and gets tested for the virus. Sims in critical condition are always tested.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.5
@@ -513,7 +513,7 @@
     "key": "TEST_DURATION",
     "name": "Test duration",
     "description": "This is the time, in days, that it takes for a sim to be tested for the virus.",
-    "integer": true,
+    "valuetype": "integer",
     "range_min": 0,
     "range_max": 10,
     "default": 2
@@ -522,7 +522,7 @@
     "key": "PROB_INFECTED_NOTIFY_APP",
     "name": "Probability of confirmed infection notifying app",
     "description": "This is the probability that, when an app user has tested positive for the virus, the app and other users are notified of it.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.7
@@ -531,7 +531,7 @@
     "key": "APP_INFECTION_NOTIFICATION_BACK_DAYS",
     "name": "Length of app history when notified of infection",
     "description": "When an app user, is notified of an infection, the app will check this many days into the past for recorded contact with the infectee. If such contact was recorded, the user will be marked as exposed.",
-    "integer": true,
+    "valuetype": "integer",
     "range_min": 1,
     "range_max": 365,
     "default": 10
@@ -540,7 +540,7 @@
     "key": "PROB_EXPOSED_RECEIVE_APP_MESSAGE",
     "name": "Probability that exposed users receive an app message",
     "description": "This is the probability that, if the app has marked a sim as exposed, they receive a notification of this, and become aware of it.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.9
@@ -549,7 +549,7 @@
     "key": "MEAN_INFECTION_SICKNESS_DURATION",
     "name": "Average sickness duration of infection",
     "description": "This is the average time that a sim with the virus is sick. When it ends, the sim either recovers or enters critical condition.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 3,
     "range_max": 30,
     "default": 14
@@ -558,7 +558,7 @@
     "key": "PROB_EXPOSED_SELF_QUARANTINE",
     "name": "Probability of self-quarantining when exposed",
     "description": "This is the probability that a sim aware they are exposed self-quarantines.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.9
@@ -567,7 +567,7 @@
     "key": "PROB_EXPOSED_SEEK_DIAGNOSIS",
     "name": "Probability of seeking diagnosis when exposed",
     "description": "This is the probability that a sim aware they are exposed seeks diagnosis and gets tested for the virus.",
-    "integer": false,
+    "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
     "default": 0.6
