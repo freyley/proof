@@ -1,0 +1,19 @@
+{
+  "name": "simcontagion",
+  "version": "1.0.0",
+  "description": "Interactive demo of how a virus can spread in a simulated city and how a mobile app can help contain it.",
+  "author": "Mikhail Voloshin",
+  "private": true,
+  "scripts": {
+    "dev": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "nuxt": "^2.0.0"
+  },
+  "devDependencies": {
+    "@nuxtjs/vuetify": "^1.0.0"
+  }
+}
