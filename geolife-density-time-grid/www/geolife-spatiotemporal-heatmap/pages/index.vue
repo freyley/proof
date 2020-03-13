@@ -1,89 +1,85 @@
 <template>
   <v-layout>
-    <v-flex>
+    <v-row>
+      <v-col cols="12" md="8" xl="6">
+        <div class="map-container">
+          <GmapMap
+            ref="mapRef"
+            v-if="trajectoryModel.isDataLoaded"
+            :center="mapInitCenter"
+            :zoom="10"
+            map-type-id="roadmap"
+            style="width: 100%; height: 100%"
+          >
+          </GmapMap>
+        </div>
+      </v-col>
 
-      <v-card>
-        <v-card-title>
-          Geolife Animated Heatmap
-        </v-card-title>
+      <v-col>
+        <v-alert type="info"
+            v-if="!trajectoryModel.isDataLoading &&
+                  !trajectoryModel.isDataLoaded">
+          The heatmap data has not yet been loaded.
+          The data comes as a JSON file approximately
+          25 MB unpacked, 5 MB on the wire.
+          This demo permits you to actively decide to
+          load the data file so that you can get a feel
+          for the speed of the loading process. In
+          practice, the data would begin loading
+          automatically upon the visitor's arrival
+          to the site. We'll use an efficient CDN
+          for production; right now, we're hosted on
+          a single GoDaddy server, which isn't the
+          most efficient way to deliver large files
+          to large numbers of users.
+        </v-alert>
 
-        <v-card-text>
-          <v-alert type="info"
-              v-if="!trajectoryModel.isDataLoading &&
-                    !trajectoryModel.isDataLoaded">
-            The heatmap data has not yet been loaded.
-            The data file is approximately 1 MB JSON.
-            This demo permits you to actively decide to
-            load the data file so that you can get a feel
-            for the speed of the loading process. In
-            practice, the data would begin loading
-            automatically upon the visitor's arrival
-            to the site.
-          </v-alert>
+        <v-btn color="primary"
+            v-if="!trajectoryModel.isDataLoaded"
+            :loading="trajectoryModel.isDataLoading"
+            @click="loadData()">
+          Load Data
+        </v-btn>
 
-          <div class="map-container">
-            <GmapMap
-              ref="mapRef"
-              v-if="trajectoryModel.isDataLoaded"
-              :center="mapInitCenter"
-              :zoom="10"
-              map-type-id="roadmap"
-              style="width: 100%; height: 100%"
-            >
-            </GmapMap>
-          </div>
-        </v-card-text>
+        <v-alert type="info"
+            v-if="trajectoryModel.isDataLoaded">
+          Data loaded in
+          {{trajectoryModel.durationDataLoad}} ms
+        </v-alert>
 
-        <v-card-actions>
-          <v-btn color="primary"
-              v-if="!trajectoryModel.isDataLoaded"
-              :loading="trajectoryModel.isDataLoading"
-              @click="loadData()">
-            Load Data
-          </v-btn>
+        <v-container class="column ml-2"
+            v-if="trajectoryModel.isDataLoaded">
+          <v-row class="font-weight-light font-italic"
+              style="font-family: monospace"
+          >{{currentTimeDateObj}}</v-row>
 
-          <v-alert type="info"
-              v-if="trajectoryModel.isDataLoaded">
-            Data loaded in
-            {{trajectoryModel.durationDataLoad}} ms
-          </v-alert>
+          <v-row>
+            <v-slider
+              v-model="currentTime"
+              :min="trajectoryModel.timeRange.begin"
+              :max="trajectoryModel.timeRange.end"
+            ></v-slider>
 
-          <v-container class="column ml-2"
-              v-if="trajectoryModel.isDataLoaded">
-            <v-row class="font-weight-light font-italic"
-                style="font-family: monospace"
-            >{{currentTimeDateObj}}</v-row>
+            <v-btn fab small class="mx-1" color="primary"
+                v-if="!isPlaying"
+                @click="isPlaying=true; play()">
+              <v-icon>mdi-play</v-icon>
+            </v-btn>
+            <v-btn fab small class="mx-1" color="primary"
+                v-if="!isPlaying"
+                @click="advanceTime()">
+              <v-icon>mdi-play-pause</v-icon>
+            </v-btn>
+            <v-btn fab small class="mx-1" color="primary"
+                v-if="isPlaying"
+                @click="isPlaying=false">
+              <v-icon>mdi-stop</v-icon>
+            </v-btn>
+          </v-row>
+        </v-container>
 
-            <v-row>
-              <v-slider
-                v-model="currentTime"
-                :min="trajectoryModel.timeRange.begin"
-                :max="trajectoryModel.timeRange.end"
-              ></v-slider>
-
-              <v-btn fab small class="mx-1" color="primary"
-                  v-if="!isPlaying"
-                  @click="isPlaying=true; play()">
-                <v-icon>mdi-play</v-icon>
-              </v-btn>
-              <v-btn fab small class="mx-1" color="primary"
-                  v-if="!isPlaying"
-                  @click="advanceTime()">
-                <v-icon>mdi-play-pause</v-icon>
-              </v-btn>
-              <v-btn fab small class="mx-1" color="primary"
-                  v-if="isPlaying"
-                  @click="isPlaying=false">
-                <v-icon>mdi-stop</v-icon>
-              </v-btn>
-
-            </v-row>
-
-          </v-container>
-        </v-card-actions>
-      </v-card>
-
-    </v-flex>
+      </v-col>
+    </v-row>
   </v-layout>
 </template>
 
@@ -92,7 +88,7 @@
   .map-container {
     background: yellow;
     width: 100%;
-    height: 50vh;
+    height: calc(100vh - 10em);
   }
 }
 </style>
