@@ -20,13 +20,11 @@
           </v-alert>
 
           <div class="map-container">
-
-
             <GmapMap
               ref="mapRef"
               v-if="isDataLoaded"
               :center="mapInitCenter"
-              :zoom="8"
+              :zoom="9"
               map-type-id="roadmap"
               style="width: 100%; height: 100%"
             >
@@ -46,13 +44,15 @@
           </v-alert>
 
           <v-container class="column ml-2" v-if="isDataLoaded">
-            <v-row class="font-weight-light font-italic">{{currentTimestepDateObj}}</v-row>
+            <v-row class="font-weight-light font-italic"
+                style="font-family: monospace"
+            >{{currentTimeDateObj}}</v-row>
 
             <v-row>
               <v-slider
-                v-model="currentTimestepIndex"
-                min="0"
-                :max="numTimesteps"
+                v-model="currentTime"
+                :min="timeRange.begin"
+                :max="timeRange.end"
               ></v-slider>
 
               <v-btn fab small class="mx-1" color="primary"
@@ -62,7 +62,7 @@
               </v-btn>
               <v-btn fab small class="mx-1" color="primary"
                   v-if="!isPlaying"
-                  @click="currentTimestepIndex++; currentTimestepIndex%=numTimesteps">
+                  @click="advanceTime()">
                 <v-icon>mdi-play-pause</v-icon>
               </v-btn>
               <v-btn fab small class="mx-1" color="primary"
@@ -108,12 +108,15 @@ export default {
 
       googleMapObject: null,
 
-      timeSeriesHeatMapData: null,
-      heatmapRange: 0,
-      currentTimestepIndex: 0,
+      trajectoryData: null,
 
-      currentHeatmapDataPoints: null,
+      currentTime: 0,
+      timeIncrement: 1 * 60 * 60, // Advance by this many seconds at a time
       isPlaying: false,
+
+      currentTrajRecordIndexByTrajId: {},
+
+      mapMarkersByTrajId: {},
 
       mapInitCenter: {
         lat: 40,
@@ -123,46 +126,26 @@ export default {
   },
 
   computed: {
-    numTimesteps() {
-      if (!this.timeSeriesHeatMapData) {
-        return 0;
+    timeRange() {
+      const retval = {
+        begin: 0,
+        end: 0,
+        span: 0
+      };
+      if (this.trajectoryData) {
+        retval.begin = this.trajectoryData.ranges['time-start'],
+        retval.end = this.trajectoryData.ranges['time-end'],
+        retval.span = retval.end - retval.begin;
       }
-      return this.timeSeriesHeatMapData.length;
+      return retval;
     },
 
-    currentTimestepObj() {
-      if (!this.timeSeriesHeatMapData ||
-          !this.timeSeriesHeatMapData[this.currentTimestepIndex]) {
-        return null;
-      }
-      return this.timeSeriesHeatMapData[this.currentTimestepIndex];
-    },
-
-    currentTimestepDateObj() {
-      if (!this.currentTimestepObj) {
-        return null;
-      }
-      return new Date(this.currentTimestepObj[0] * 1000);
+    currentTimeDateObj() {
+      return new Date(this.currentTime * 1000);
     },
 
     currentTimestepPoints() {
-      if (!this.currentTimestepObj) {
-        return [];
-      }
-      const pointsByWeight = this.currentTimestepObj[1];
-      const pointsUnpacked = pointsByWeight.reduce( (accumulator, arrWeight) => {
-        const weight = arrWeight[0];
-        const arrPointsWithWeight = arrWeight[1];
-        const arrPtObjs = arrPointsWithWeight.map(arrPt => {
-          return {
-            lat: arrPt[0],
-            lng: arrPt[1],
-            weight
-          };
-        });
-        return accumulator.concat(arrPtObjs);
-      }, []);
-      return pointsUnpacked;
+      return []
     }
   },
 
@@ -178,30 +161,46 @@ export default {
       this.heatmapRange = 0;
       this.currentTimestepIndex = 0;
 
-      this.$axios.get('data/time_series_sparse_geospatial_tallies.json')
+      this.$axios.get('data/trajectories_in_spatial_grid.json')
         .then(data => {
           this.isDataLoaded = true;
           this.dataLoadTimeEnd = new Date();
 
-          this.heatmapRange = data.data.ranges.tally;
-          this.timeSeriesHeatMapData = data.data.timeseries;
+          this.trajectoryData = data.data;
+          this.currentTime = this.timeRange.begin + Math.floor(this.timeRange.span / 3);
+
+          // Convert the lat/long from fixed-point integer to floats.
+          // Also, to help with seeking, for every trajectory record,
+          // note its end time, i.e. the time of the next trajectory record.
+          const pow10 = Math.pow(10, this.trajectoryData.gridparams['fixed-point-precision']);
+          Object.entries(this.trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
+            trajectory.forEach( (trajRecord, iRecord) => {
+              trajRecord[1] /= pow10;
+              trajRecord[2] /= pow10;
+
+              const nextRecord = trajectory[iRecord + 1];
+              if (!nextRecord) {
+                trajRecord.push(this.timeRange.end);
+              } else {
+                trajRecord.push(nextRecord[0]);
+              }
+            });
+          });
 
           // We have to do this silly timeout trick because we can't
           // grab a reference to the mapRef element because it doesn't
           // exist yet because the v-if hasn't processed yet.
           // And we can't make it exist before the v-if because there's
           // a bug in the component that throws an annoying DOM error.
-          setTimeout(() => {
+          this.$nextTick(() => {
             this.$refs.mapRef.$mapPromise.then((map) => {
               this.googleMapObject = map;
-              this.updateCurrentIndexHeatmap();
+              this.updateMap();
 
-              if (this.currentTimestepPoints &&
-                  this.currentTimestepPoints.length) {
-                // Instantly zoom to the biggest blob in timestep 0.
-                this.mapInitCenter.lat = this.currentTimestepPoints[0].lat;
-                this.mapInitCenter.lng = this.currentTimestepPoints[0].lng;
-              }
+              const firstTrajId = Object.keys(this.trajectoryData.trajectories)[0];
+              const firstCoords = this.getCurrentCoordinates(firstTrajId)
+              this.mapInitCenter.lat = firstCoords.lat;
+              this.mapInitCenter.lng = firstCoords.lng;
             })
           }, 0);
         })
@@ -213,7 +212,76 @@ export default {
         });
     },
 
-    updateCurrentIndexHeatmap() {
+    updateCurrentTrajRecordForEachTrajId() {
+      Object.entries(this.trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
+        let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
+        if (!iTrajRec) {
+          iTrajRec = 0;
+        }
+
+        while (this.currentTime < trajectory[iTrajRec][0] && iTrajRec > 0) {
+          // Current time is before the start of this trajectory record.
+          // Look in the previous trajectory record.
+          iTrajRec--;
+        }
+        while (this.currentTime > trajectory[iTrajRec][3] && iTrajRec < trajectory.length-1) {
+          // Current time is after the end of this trajectory record.
+          // Look in the next trajectory record.
+          iTrajRec++;
+        }
+        this.currentTrajRecordIndexByTrajId[trajId] = iTrajRec;
+      });
+    },
+
+    getCurrentCoordinates(trajId) {
+      let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
+      if (!iTrajRec) {
+        iTrajRec = 0;
+      }
+      const trajRec = this.trajectoryData.trajectories[trajId][iTrajRec];
+      const coords = {
+        lat: trajRec[1],
+        lng: trajRec[2]
+      }
+      return coords;
+    },
+
+    getCurrentCoordinatesOfEachTrajectory() {
+      const currentCoordsOfEachTrajId = {};
+      Object.entries(this.trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
+        currentCoordsOfEachTrajId[trajId] = this.getCurrentCoordinates(trajId);
+      });
+      return currentCoordsOfEachTrajId;
+    },
+
+    updateMarkers() {
+      if (!this.googleMapObject) {
+        return;
+      }
+      Object.keys(this.trajectoryData.trajectories).forEach(trajId => {
+        const coords = this.getCurrentCoordinates(trajId);
+        let mapMarker = this.mapMarkersByTrajId[trajId];
+        if (!mapMarker) {
+          mapMarker = new google.maps.Marker({
+            position: coords,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 3
+            },
+            draggable: false,
+            map: this.googleMapObject
+          });
+          this.mapMarkersByTrajId[trajId] = mapMarker;
+        }
+        mapMarker.setPosition(coords);
+      });
+    },
+
+    updateMap() {
+      this.updateCurrentTrajRecordForEachTrajId();
+
+      this.updateMarkers();
+      /*
       if (!this.googleMapObject || !this.currentTimestepObj) {
         return;
       }
@@ -236,6 +304,14 @@ export default {
         data: this.currentHeatmapDataPoints
       });
       heatmap.setMap(this.googleMapObject);
+      */
+    },
+
+    advanceTime() {
+      this.currentTime += this.timeIncrement;
+      if (this.currentTime > this.timeRange.max) {
+        this.currentTime = this.timeRange.max;
+      }
     },
 
     play() {
@@ -243,18 +319,20 @@ export default {
         return;
       }
 
-      this.currentTimestepIndex++;
-      this.currentTimestepIndex %= this.numTimesteps;
+      this.advanceTime();
 
       setTimeout(() => {
         this.play();
-      }, 500);
+      }, 100);
     }
   },
 
+  mounted() {
+  },
+
   watch: {
-    currentTimestepIndex(value) {
-      this.updateCurrentIndexHeatmap();
+    currentTime(value) {
+      this.updateMap();
     }
   }
 }
