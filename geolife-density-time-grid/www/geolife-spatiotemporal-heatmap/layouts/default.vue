@@ -4,7 +4,7 @@
       <v-toolbar-title>COVID19risk spatiotemporal heatmap demo</v-toolbar-title>
     </v-app-bar>
     <v-content>
-      <v-container>
+      <v-container fluid>
         <nuxt />
       </v-container>
     </v-content>

@@ -8,7 +8,9 @@
         </v-card-title>
 
         <v-card-text>
-          <v-alert type="info" v-if="!isDataLoading && !isDataLoaded">
+          <v-alert type="info"
+              v-if="!trajectoryModel.isDataLoading &&
+                    !trajectoryModel.isDataLoaded">
             The heatmap data has not yet been loaded.
             The data file is approximately 1 MB JSON.
             This demo permits you to actively decide to
@@ -22,7 +24,7 @@
           <div class="map-container">
             <GmapMap
               ref="mapRef"
-              v-if="isDataLoaded"
+              v-if="trajectoryModel.isDataLoaded"
               :center="mapInitCenter"
               :zoom="10"
               map-type-id="roadmap"
@@ -33,17 +35,21 @@
         </v-card-text>
 
         <v-card-actions>
-          <v-btn color="primary" v-if="!isDataLoaded" :loading="isDataLoading"
+          <v-btn color="primary"
+              v-if="!trajectoryModel.isDataLoaded"
+              :loading="trajectoryModel.isDataLoading"
               @click="loadData()">
             Load Data
           </v-btn>
 
-          <v-alert type="info" v-if="dataLoadTimeStart && dataLoadTimeEnd">
+          <v-alert type="info"
+              v-if="trajectoryModel.isDataLoaded">
             Data loaded in
-            {{dataLoadTimeEnd.getTime() - dataLoadTimeStart.getTime()}} ms
+            {{trajectoryModel.durationDataLoad}} ms
           </v-alert>
 
-          <v-container class="column ml-2" v-if="isDataLoaded">
+          <v-container class="column ml-2"
+              v-if="trajectoryModel.isDataLoaded">
             <v-row class="font-weight-light font-italic"
                 style="font-family: monospace"
             >{{currentTimeDateObj}}</v-row>
@@ -51,8 +57,8 @@
             <v-row>
               <v-slider
                 v-model="currentTime"
-                :min="timeRange.begin"
-                :max="timeRange.end"
+                :min="trajectoryModel.timeRange.begin"
+                :max="trajectoryModel.timeRange.end"
               ></v-slider>
 
               <v-btn fab small class="mx-1" color="primary"
@@ -92,6 +98,8 @@
 </style>
 
 <script>
+import trajectoryModel from '~/model/trajectory';
+
 
 export default {
   components: {
@@ -99,22 +107,14 @@ export default {
 
   data() {
     return {
-      isDataLoaded: false,
-      isDataLoading: false,
-      errorMsg: null,
+      trajectoryModel,
 
-      dataLoadTimeStart: null,
-      dataLoadTimeEnd: null,
-
+      patientZero: '000',
       googleMapObject: null,
-
-      trajectoryData: null,
 
       currentTime: 0,
       timeIncrement: 5 * 60, // Advance by this many seconds at a time
       isPlaying: false,
-
-      currentTrajRecordIndexByTrajId: {},
 
       mapMarkersByTrajId: {},
       heatmapPointsByCellKey: {},
@@ -128,221 +128,121 @@ export default {
   },
 
   computed: {
-    timeRange() {
-      const retval = {
-        begin: 0,
-        end: 0,
-        span: 0
-      };
-      if (this.trajectoryData) {
-        retval.begin = this.trajectoryData.ranges['time-start'],
-        retval.end = this.trajectoryData.ranges['time-end'],
-        retval.span = retval.end - retval.begin;
-      }
-      return retval;
-    },
-
     currentTimeDateObj() {
       return new Date(this.currentTime * 1000);
-    },
-
-    currentTimestepPoints() {
-      return []
     }
   },
 
   methods: {
+    reset() {
+      this.currentTime = 0;
+      this.isPlaying = false;
+
+      this.mapMarkersByTrajId = {};
+      this.heatmapPointsByCellKey = {};
+      this.heatmapObj = null;
+
+      trajectoryModel.reset();
+    },
+
     loadData() {
-      this.dataLoadTimeStart = new Date();
-      this.dataLoadTimeEnd = null;
-      this.isDataLoading = true;
-      this.isDataLoaded = false;
-      this.errorMsg = null;
+      this.reset();
+      trajectoryModel.load(this.$axios, {
+        dbgOnlyKeepFirstNTrajectories: false,
+        patientZero: this.patientZero
+      }).then(() => {
+        const patientZeroInitialRecord = trajectoryModel.initialRecord(this.patientZero);
 
-      this.timeSeriesHeatMapData = null;
-      this.heatmapRange = 0;
-      this.currentTimestepIndex = 0;
+        this.currentTime = patientZeroInitialRecord.timeInCell.begin;
+        this.mapInitCenter = patientZeroInitialRecord.location;
 
-      this.$axios.get('data/trajectories_in_spatial_grid.json')
-        .then(data => {
-          this.isDataLoaded = true;
-          this.dataLoadTimeEnd = new Date();
+        // We have to do this silly timeout trick because we can't
+        // grab a reference to the mapRef element because it doesn't
+        // exist yet because the v-if hasn't processed yet.
+        // And we can't make it exist before the v-if because there's
+        // a bug in the component that throws an annoying DOM error.
+        this.$nextTick(() => {
+          this.$refs.mapRef.$mapPromise.then((map) => {
+            this.googleMapObject = map;
+            this.createHeatmap();
 
-          this.trajectoryData = data.data;
-          //this.currentTime = this.timeRange.begin + Math.floor(this.timeRange.span / 3);
-          this.currentTime = this.trajectoryData.trajectories['000'][0][0];
+            this.updateMap();
+          })
+        }, 0);
+      });
+    },
 
-          // TODO DEBUG: Neuter the data so we can work with it more easily.
-          //this.trajectoryData.trajectories = {
-          //  '000': this.trajectoryData.trajectories['000']
-          //};
+    createHeatmap() {
+      this.heatmapObj = new google.maps.visualization.HeatmapLayer({
+        data: [],
+        dissipating: true,
+        radius: 20,
+        opacity: .9,
+        maxIntensity: 20,
+        gradient: [
+        'rgba(255, 255, 0, 0)',
+        'rgba(255, 255, 0, 1)',
+        'rgba(255, 0, 0, 1)',
+        'rgba(180, 0, 0, 1)'
+      ]
+      });
+      this.heatmapObj.setMap(this.googleMapObject);
+    },
 
-          // Convert the lat/long from fixed-point integer to floats.
-          const pow10 = Math.pow(10, this.trajectoryData.gridparams['fixed-point-precision']);
-          Object.entries(this.trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
-            trajectory.forEach( (trajRecord, iRecord) => {
-              trajRecord[2] /= pow10;
-              trajRecord[3] /= pow10;
-            });
-          });
-
-          // We have to do this silly timeout trick because we can't
-          // grab a reference to the mapRef element because it doesn't
-          // exist yet because the v-if hasn't processed yet.
-          // And we can't make it exist before the v-if because there's
-          // a bug in the component that throws an annoying DOM error.
-          this.$nextTick(() => {
-            this.$refs.mapRef.$mapPromise.then((map) => {
-              this.googleMapObject = map;
-              this.updateMap();
-
-              this.mapInitCenter.lat = this.trajectoryData.trajectories['000'][0][2];
-              this.mapInitCenter.lng = this.trajectoryData.trajectories['000'][0][3];
-            })
-          }, 0);
-        })
-        .catch(err => {
-          this.errorMsg = err.message || JSON.stringify(err);
-        })
-        .finally( () => {
-          this.isDataLoading = false;
+    getOrCreateMapMarker(trajId) {
+      let mapMarker = this.mapMarkersByTrajId[trajId];
+      if (!mapMarker) {
+        mapMarker = new google.maps.Marker({
+          position: null,
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 3
+          },
+          draggable: false,
+          title: `User ${trajId}`,
+          map: this.googleMapObject
         });
+        this.mapMarkersByTrajId[trajId] = mapMarker;
+      }
+      return mapMarker;
     },
 
-    updateCurrentTrajRecordForEachTrajId() {
-      Object.entries(this.trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
-        let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
-        if (!iTrajRec) {
-          iTrajRec = 0;
-        }
-
-        while (this.currentTime < trajectory[iTrajRec][0] && iTrajRec > 0) {
-          // Current time is before the start of this trajectory record.
-          // Look in the previous trajectory record.
-          iTrajRec--;
-        }
-        while (this.currentTime > trajectory[iTrajRec][1] && iTrajRec < trajectory.length-1) {
-          // Current time is after the end of this trajectory record.
-          // Look in the next trajectory record.
-          iTrajRec++;
-        }
-        this.currentTrajRecordIndexByTrajId[trajId] = iTrajRec;
-      });
-    },
-
-    getCurrentCoordinates(trajId) {
-      let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
-      if (!iTrajRec) {
-        iTrajRec = 0;
-      }
-      const trajRec = this.trajectoryData.trajectories[trajId][iTrajRec];
-
-      if (this.currentTime < trajRec[0] ||
-          this.currentTime > trajRec[1]) {
-        // Current time is outside the current trajectory record!
-        return null;
+    getOrCreateHeatmapPoint(lat, lng) {
+      if (typeof lat === 'object') {
+        lng = lat.lng;
+        lat = lat.lat;
       }
 
-      const coords = {
-        lat: trajRec[2],
-        lng: trajRec[3]
+      const cellKey = `${lat},${lng}`;
+      let heatmapPoint = this.heatmapPointsByCellKey[cellKey];
+      if (!heatmapPoint) {
+        heatmapPoint = {
+          weight: 1,
+          location: new google.maps.LatLng(lat, lng)
+        };
+        this.heatmapPointsByCellKey[cellKey] = heatmapPoint;
       }
-      return coords;
-    },
-
-    getAllCoordinatesSinceLastTimeInterval(trajId) {
-      let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
-      if (!iTrajRec && iTrajRec !== 0) {
-        return [];
-      }
-      const lastTimeBegin = this.currentTime - this.timeIncrement;
-      const coordses = [];
-      while (true) {
-        if (iTrajRec < 0) {
-          break;
-        }
-        const trajRec = this.trajectoryData.trajectories[trajId][iTrajRec];
-        if (trajRec[1] < lastTimeBegin) {
-          // This record ended before our last time interval began.
-          break;
-        }
-        if (this.currentTime > trajRec[0]) {
-          // Only push coords from timeframes that don't start in the future.
-          coordses.push({
-            lat: trajRec[2],
-            lng: trajRec[3],
-          });
-        }
-        iTrajRec--;
-      }
-      return coordses;
-    },
-
-    getCurrentCoordinatesOfEachTrajectory() {
-      const currentCoordsOfEachTrajId = {};
-      Object.entries(this.trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
-        currentCoordsOfEachTrajId[trajId] = this.getCurrentCoordinates(trajId);
-      });
-      return currentCoordsOfEachTrajId;
+      return heatmapPoint;
     },
 
     updateMarkers() {
       if (!this.googleMapObject) {
         return;
       }
-      Object.keys(this.trajectoryData.trajectories).forEach(trajId => {
-        const coords = this.getCurrentCoordinates(trajId);
-        let mapMarker = this.mapMarkersByTrajId[trajId];
-
-        if (!mapMarker) {
-          mapMarker = new google.maps.Marker({
-            position: coords,
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 3
-            },
-            draggable: false,
-            title: `User ${trajId}`,
-            map: this.googleMapObject
-          });
-          this.mapMarkersByTrajId[trajId] = mapMarker;
-        }
-        mapMarker.setPosition(coords);
+      Object.entries(trajectoryModel.locations).forEach(([trajId, location]) => {
+        const mapMarker = this.getOrCreateMapMarker(trajId);
+        mapMarker.setPosition(location);
       });
     },
 
     updateHeatmap() {
-      if (!this.googleMapObject) {
+      if (!this.googleMapObject || !this.heatmapObj) {
         return;
       }
-      if (!this.heatmapObj) {
-        this.heatmapObj = new google.maps.visualization.HeatmapLayer({
-          data: [],
-          dissipating: true,
-          radius: 20,
-          opacity: .9,
-          maxIntensity: 20,
-          gradient: [
-          'rgba(255, 255, 0, 0)',
-          'rgba(255, 255, 0, 1)',
-          'rgba(255, 0, 0, 1)',
-          'rgba(180, 0, 0, 1)'
-        ]
-        });
-        this.heatmapObj.setMap(this.googleMapObject);
-      }
-      Object.keys(this.trajectoryData.trajectories).forEach(trajId => {
-        const coordses = this.getAllCoordinatesSinceLastTimeInterval(trajId);
+      const cellVisits = trajectoryModel.locationsInLastTimeInterval(this.timeIncrement);
+      Object.entries(cellVisits).forEach( ([trajId, coordses]) => {
         coordses.forEach(coords => {
-          const cellKey = `${coords.lat},${coords.lng}`;
-          let heatmapPoint = this.heatmapPointsByCellKey[cellKey];
-          if (!heatmapPoint) {
-            heatmapPoint = {
-              weight: 0,
-              location: new google.maps.LatLng(coords.lat, coords.lng)
-            };
-            this.heatmapPointsByCellKey[cellKey] = heatmapPoint;
-          }
+          let heatmapPoint = this.getOrCreateHeatmapPoint(coords);
           heatmapPoint.weight += 1;
           heatmapPoint.weight = Math.min(100, heatmapPoint.weight);
 
@@ -353,40 +253,15 @@ export default {
     },
 
     updateMap() {
-      this.updateCurrentTrajRecordForEachTrajId();
-
       this.updateMarkers();
       this.updateHeatmap();
-      /*
-      if (!this.googleMapObject || !this.currentTimestepObj) {
-        return;
-      }
-
-      const srcPts = this.currentTimestepPoints;
-      const heatMapData = srcPts.map(srcPt => {
-        return {
-          location: new google.maps.LatLng(srcPt.lat, srcPt.lng),
-          weight: srcPt.weight
-        };
-      });
-      if (this.currentHeatmapDataPoints) {
-        // Clear the last pile of data points, if they exist.
-        // https://stackoverflow.com/questions/25699643/delete-heat-map-for-refreshing
-        this.currentHeatmapDataPoints.clear();
-      }
-      this.currentHeatmapDataPoints = new google.maps.MVCArray(heatMapData);
-
-      const heatmap = new google.maps.visualization.HeatmapLayer({
-        data: this.currentHeatmapDataPoints
-      });
-      heatmap.setMap(this.googleMapObject);
-      */
     },
 
     advanceTime() {
+      const timeMax = trajectoryModel.timeRange.end;
       this.currentTime += this.timeIncrement;
-      if (this.currentTime > this.timeRange.max) {
-        this.currentTime = this.timeRange.max;
+      if (this.currentTime > timeMax) {
+        this.currentTime = timeMax;
       }
     },
 
@@ -408,6 +283,7 @@ export default {
 
   watch: {
     currentTime(value) {
+      trajectoryModel.seek(this.currentTime);
       this.updateMap();
     }
   }
