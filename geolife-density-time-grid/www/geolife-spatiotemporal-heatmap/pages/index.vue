@@ -24,7 +24,7 @@
               ref="mapRef"
               v-if="isDataLoaded"
               :center="mapInitCenter"
-              :zoom="9"
+              :zoom="10"
               map-type-id="roadmap"
               style="width: 100%; height: 100%"
             >
@@ -111,12 +111,14 @@ export default {
       trajectoryData: null,
 
       currentTime: 0,
-      timeIncrement: 1 * 60 * 60, // Advance by this many seconds at a time
+      timeIncrement: 5 * 60, // Advance by this many seconds at a time
       isPlaying: false,
 
       currentTrajRecordIndexByTrajId: {},
 
       mapMarkersByTrajId: {},
+      heatmapPointsByCellKey: {},
+      heatmapObj: null,
 
       mapInitCenter: {
         lat: 40,
@@ -167,23 +169,20 @@ export default {
           this.dataLoadTimeEnd = new Date();
 
           this.trajectoryData = data.data;
-          this.currentTime = this.timeRange.begin + Math.floor(this.timeRange.span / 3);
+          //this.currentTime = this.timeRange.begin + Math.floor(this.timeRange.span / 3);
+          this.currentTime = this.trajectoryData.trajectories['000'][0][0];
+
+          // TODO DEBUG: Neuter the data so we can work with it more easily.
+          //this.trajectoryData.trajectories = {
+          //  '000': this.trajectoryData.trajectories['000']
+          //};
 
           // Convert the lat/long from fixed-point integer to floats.
-          // Also, to help with seeking, for every trajectory record,
-          // note its end time, i.e. the time of the next trajectory record.
           const pow10 = Math.pow(10, this.trajectoryData.gridparams['fixed-point-precision']);
           Object.entries(this.trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
             trajectory.forEach( (trajRecord, iRecord) => {
-              trajRecord[1] /= pow10;
               trajRecord[2] /= pow10;
-
-              const nextRecord = trajectory[iRecord + 1];
-              if (!nextRecord) {
-                trajRecord.push(this.timeRange.end);
-              } else {
-                trajRecord.push(nextRecord[0]);
-              }
+              trajRecord[3] /= pow10;
             });
           });
 
@@ -197,10 +196,8 @@ export default {
               this.googleMapObject = map;
               this.updateMap();
 
-              const firstTrajId = Object.keys(this.trajectoryData.trajectories)[0];
-              const firstCoords = this.getCurrentCoordinates(firstTrajId)
-              this.mapInitCenter.lat = firstCoords.lat;
-              this.mapInitCenter.lng = firstCoords.lng;
+              this.mapInitCenter.lat = this.trajectoryData.trajectories['000'][0][2];
+              this.mapInitCenter.lng = this.trajectoryData.trajectories['000'][0][3];
             })
           }, 0);
         })
@@ -224,7 +221,7 @@ export default {
           // Look in the previous trajectory record.
           iTrajRec--;
         }
-        while (this.currentTime > trajectory[iTrajRec][3] && iTrajRec < trajectory.length-1) {
+        while (this.currentTime > trajectory[iTrajRec][1] && iTrajRec < trajectory.length-1) {
           // Current time is after the end of this trajectory record.
           // Look in the next trajectory record.
           iTrajRec++;
@@ -239,11 +236,46 @@ export default {
         iTrajRec = 0;
       }
       const trajRec = this.trajectoryData.trajectories[trajId][iTrajRec];
+
+      if (this.currentTime < trajRec[0] ||
+          this.currentTime > trajRec[1]) {
+        // Current time is outside the current trajectory record!
+        return null;
+      }
+
       const coords = {
-        lat: trajRec[1],
-        lng: trajRec[2]
+        lat: trajRec[2],
+        lng: trajRec[3]
       }
       return coords;
+    },
+
+    getAllCoordinatesSinceLastTimeInterval(trajId) {
+      let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
+      if (!iTrajRec && iTrajRec !== 0) {
+        return [];
+      }
+      const lastTimeBegin = this.currentTime - this.timeIncrement;
+      const coordses = [];
+      while (true) {
+        if (iTrajRec < 0) {
+          break;
+        }
+        const trajRec = this.trajectoryData.trajectories[trajId][iTrajRec];
+        if (trajRec[1] < lastTimeBegin) {
+          // This record ended before our last time interval began.
+          break;
+        }
+        if (this.currentTime > trajRec[0]) {
+          // Only push coords from timeframes that don't start in the future.
+          coordses.push({
+            lat: trajRec[2],
+            lng: trajRec[3],
+          });
+        }
+        iTrajRec--;
+      }
+      return coordses;
     },
 
     getCurrentCoordinatesOfEachTrajectory() {
@@ -261,6 +293,7 @@ export default {
       Object.keys(this.trajectoryData.trajectories).forEach(trajId => {
         const coords = this.getCurrentCoordinates(trajId);
         let mapMarker = this.mapMarkersByTrajId[trajId];
+
         if (!mapMarker) {
           mapMarker = new google.maps.Marker({
             position: coords,
@@ -269,6 +302,7 @@ export default {
               scale: 3
             },
             draggable: false,
+            title: `User ${trajId}`,
             map: this.googleMapObject
           });
           this.mapMarkersByTrajId[trajId] = mapMarker;
@@ -277,10 +311,52 @@ export default {
       });
     },
 
+    updateHeatmap() {
+      if (!this.googleMapObject) {
+        return;
+      }
+      if (!this.heatmapObj) {
+        this.heatmapObj = new google.maps.visualization.HeatmapLayer({
+          data: [],
+          dissipating: true,
+          radius: 20,
+          opacity: .9,
+          maxIntensity: 20,
+          gradient: [
+          'rgba(255, 255, 0, 0)',
+          'rgba(255, 255, 0, 1)',
+          'rgba(255, 0, 0, 1)',
+          'rgba(180, 0, 0, 1)'
+        ]
+        });
+        this.heatmapObj.setMap(this.googleMapObject);
+      }
+      Object.keys(this.trajectoryData.trajectories).forEach(trajId => {
+        const coordses = this.getAllCoordinatesSinceLastTimeInterval(trajId);
+        coordses.forEach(coords => {
+          const cellKey = `${coords.lat},${coords.lng}`;
+          let heatmapPoint = this.heatmapPointsByCellKey[cellKey];
+          if (!heatmapPoint) {
+            heatmapPoint = {
+              weight: 0,
+              location: new google.maps.LatLng(coords.lat, coords.lng)
+            };
+            this.heatmapPointsByCellKey[cellKey] = heatmapPoint;
+          }
+          heatmapPoint.weight += 1;
+          heatmapPoint.weight = Math.min(100, heatmapPoint.weight);
+
+          const heatmapPointsData = [...Object.values(this.heatmapPointsByCellKey)];
+          this.heatmapObj.setData(heatmapPointsData);
+        });
+      });
+    },
+
     updateMap() {
       this.updateCurrentTrajRecordForEachTrajId();
 
       this.updateMarkers();
+      this.updateHeatmap();
       /*
       if (!this.googleMapObject || !this.currentTimestepObj) {
         return;
@@ -323,7 +399,7 @@ export default {
 
       setTimeout(() => {
         this.play();
-      }, 100);
+      }, 25);
     }
   },
 
