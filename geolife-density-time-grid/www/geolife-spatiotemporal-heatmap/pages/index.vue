@@ -205,6 +205,26 @@
         </v-data-table>
       </v-container>
     </v-row>
+
+    <v-row>
+      <v-container>
+        <v-col cols="12" md="6" lg="3">
+          <v-data-table
+            class="conditionreport-table"
+            :headers="conditionReportHeaders"
+            :items="epidemiologyModel.conditionReport"
+            :items-per-page="25"
+            :dense="true"
+          >
+            <template v-slot:item.popfrac="{ item }">
+              <span>
+                {{ Math.floor(item.popfrac * 100) }}%
+              </span>
+            </template>
+          </v-data-table>
+        </v-col>
+      </v-container>
+    </v-row>
   </v-layout>
 </template>
 
@@ -266,7 +286,8 @@
     }
   }
 
-  .siminfotable {
+  .siminfotable,
+  .conditionreport-table {
     .text-end {
       text-align: right !important;
     }
@@ -369,7 +390,12 @@ export default {
       },
       gradientGreenYellowRed: colorInterpolate([
         '#00aa00', '#aaaa00', '#aa4400', '#aa0000'
-      ])
+      ]),
+
+      conditionReportHeaders: [
+        {text: 'Condition', value: 'name'},
+        {text: 'Population', value: 'popfrac', align: 'end'}
+      ]
     }
   },
 

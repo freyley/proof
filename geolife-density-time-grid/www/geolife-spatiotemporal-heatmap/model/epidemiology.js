@@ -559,6 +559,34 @@ const epidemiologyModel = {
 
       this.allCatchInfectionsFromInfectees(seconds);
     });
+  },
+
+
+  get conditionReport() {
+    const reportOrder = [
+      'HEALTHY',
+      'RECOVERED',
+      'LATENT',
+      'ASYMPTOMATIC',
+      'SICK',
+      'CRITICAL',
+      'DEAD'
+    ];
+    const sims = [...Object.values(this.simInfo)];
+    const report = reportOrder.map(k => {
+      let numSimsWithCondition = 0;
+      sims.forEach(sim => {
+        if (sim.infectionStage.key === k) {
+          numSimsWithCondition++;
+        }
+      });
+      return {
+        key: k,
+        name: INFECTION_STAGES[k].name,
+        popfrac: numSimsWithCondition / sims.length
+      };
+    });
+    return report;
   }
 };
 
