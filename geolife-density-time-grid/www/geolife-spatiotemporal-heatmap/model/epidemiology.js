@@ -444,7 +444,7 @@ const epidemiologyModel = {
     // there, so there's no sense harping on moot points.
     const probContam =
       (this.paramsModel.value("PROB_CONTAMINATE") * seconds) /
-      (SEC_PROLONGED_CONTACT * locationsVisited.length);
+      (SEC_PROLONGED_CONTACT);
     locationsVisited.forEach(location => {
       if (!mathHelpers.pcheck(probContam)) {
         return;
@@ -476,7 +476,7 @@ const epidemiologyModel = {
     // Determine whether or not the sim has passed through any contaminated cells.
     const probCatch =
       (this.paramsModel.value("PROB_CATCH_FROM_LOCATION") * seconds) /
-      (SEC_PROLONGED_CONTACT * locationsVisited.length);
+      (SEC_PROLONGED_CONTACT);
     locationsVisited.forEach(location => {
       const cellkey = `${location.lat},${location.lng}`;
       const cellRecord = this.cellContamination[cellkey];
@@ -493,12 +493,59 @@ const epidemiologyModel = {
   },
 
 
+  allCatchInfectionsFromInfectees(seconds) {
+    // We don't model non-app users, so we have to assume that they are
+    // representative of the overall population.
+    // We don't want to re-do the computation all the time so we'll
+    // cache it.
+    const fracContagious = this.fractionUsersContagious;
+
+    // How many people has each sim interacted with in this time period?
+    const numPeopleInteractedWith =
+        this.paramsModel.value("NUM_PROLONGED_INTERACTIONS_PER_DAY") * seconds /
+            SEC_PER_DAY;
+
+    // Assume app users are representative of the overall population.
+    const numInfecteesInteractedWith = numPeopleInteractedWith * fracContagious;
+
+    const probEachCatch = this.paramsModel.value("PROB_CATCH_FROM_INFECTEE");
+
+    // The probability of catching it from somebody is
+    // 1 - the probability of not catching it from everybody.
+    const probCatcFromAtLeastOne = 1 - Math.pow(1 - probEachCatch, numInfecteesInteractedWith);
+
+    Object.values(this.simInfo).forEach(sim => {
+      // If the sim isn't infectable or is quarantined, then
+      // we have nothing to do.
+      if (!sim.infectionStage.infectable || sim.isQuarantined) {
+        return;
+      }
+      if (!mathHelpers.pcheck(probCatcFromAtLeastOne)) {
+        return;
+      }
+      this.infect(sim);
+    });
+  },
+
+
   get heatmapPoints() {
     const arr = [...Object.values(this.cellContamination)].map(cell => ({
       location: new google.maps.LatLng(cell.location.lat, cell.location.lng),
       weight: cell.contaminationLevel
     }));
     return arr;
+  },
+
+
+  get fractionUsersContagious() {
+    let numUsersContagious = 0;
+    const simInfos = [...Object.values(this.simInfo)];
+    simInfos.forEach(sim => {
+      if (sim.infectionStage.contagious && !sim.isQuarantined) {
+        numUsersContagious++;
+      }
+    });
+    return numUsersContagious / simInfos.length;
   },
 
 
@@ -509,6 +556,8 @@ const epidemiologyModel = {
       this.computeCellContamination(sim, seconds);
 
       this.catchInfectionsFromLocations(sim, seconds);
+
+      this.allCatchInfectionsFromInfectees(seconds);
     });
   }
 };

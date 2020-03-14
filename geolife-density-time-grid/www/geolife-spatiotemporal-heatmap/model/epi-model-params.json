@@ -333,6 +333,16 @@
     "disabled": true
   },
   {
+    "key": "NUM_PROLONGED_INTERACTIONS_PER_DAY",
+    "name": "Number of prolonged interactions per day",
+    "description": "How many people one person has direct prolonged contact with in a given day",
+    "valuetype": "float",
+    "range_min": 0,
+    "range_max": 50,
+    "default": 5,
+    "param_group": "Population characteristics"
+  },
+  {
     "key": "PROB_HEALTH_ISSUES",
     "name": "Probability of health issues",
     "description": "This is the probability that a sim is immunocompromised, has an underlying respiratory condition, or is otherwise especially vulnerable.",
@@ -455,18 +465,18 @@
     "description": "This is the probability that a sim in prolonged contact with a contaminated location catches the virus.",
     "valuetype": "float",
     "range_min": 0,
-    "range_max": 1,
-    "default": 0.1,
+    "range_max": 0.01,
+    "default": 0.001,
     "param_group": "Virus characteristics"
   },
   {
     "key": "PROB_CATCH_FROM_INFECTEE",
     "name": "Probability of catching virus from infectee",
-    "description": "This is the probability that a sim in prolonged contact with a contagious infectee catches the virus. Less likely if the infectee is self-quarantining.",
+    "description": "This is the probability that a sim in a single prolonged contact event with a contagious infectee catches the virus.",
     "valuetype": "float",
     "range_min": 0,
-    "range_max": 1,
-    "default": 0.2,
+    "range_max": 0.01,
+    "default": 0.002,
     "param_group": "Virus characteristics"
   },
   {
