@@ -1,5 +1,5 @@
 <template>
-  <v-layout>
+  <v-layout column>
     <v-row>
       <v-col cols="12" md="8" xl="6">
         <div class="map-container">
@@ -158,6 +158,17 @@
         </v-container>
       </v-col>
     </v-row>
+
+    <v-row>
+      <v-container>
+        <v-data-table
+          :headers="simInfoTableHeaders"
+          :items="epidemiologyModel.simInfoList"
+          :items-per-page="25"
+          :dense="true"
+        ></v-data-table>
+      </v-container>
+    </v-row>
   </v-layout>
 </template>
 
@@ -224,7 +235,9 @@
 <script>
 import trajectoryModel from '~/model/trajectory';
 import paramsModel from '~/model/params';
+import epidemiologyModel from '~/model/epidemiology';
 
+epidemiologyModel.paramsModel = paramsModel;
 
 export default {
   components: {
@@ -236,6 +249,7 @@ export default {
 
       paramsModel,
       trajectoryModel,
+      epidemiologyModel,
 
       patientZero: '000',
       googleMapObject: null,
@@ -251,7 +265,16 @@ export default {
       mapInitCenter: {
         lat: 40,
         lng: -100
-      }
+      },
+
+      simInfoTableHeaders: [
+        {
+          text: 'Sim ID',
+          align: 'start',
+          value: 'id',
+        },
+        { text: 'Infection Stage', value: 'infectionStage.name' }
+      ]
     }
   },
 
@@ -271,6 +294,7 @@ export default {
       this.heatmapObj = null;
 
       trajectoryModel.reset();
+      epidemiologyModel.reset();
     },
 
     resetWithData() {
@@ -282,6 +306,9 @@ export default {
       if (this.heatmapObj) {
         this.heatmapObj.setData([]);
       }
+
+      epidemiologyModel.generateSimInfo(trajectoryModel.trajectoryIds);
+      epidemiologyModel.infect(this.patientZero);
     },
 
     loadData() {
@@ -353,7 +380,7 @@ export default {
       let heatmapPoint = this.heatmapPointsByCellKey[cellKey];
       if (!heatmapPoint) {
         heatmapPoint = {
-          weight: 1,
+          weight: 0,
           location: new google.maps.LatLng(lat, lng)
         };
         this.heatmapPointsByCellKey[cellKey] = heatmapPoint;
@@ -379,8 +406,8 @@ export default {
       Object.entries(cellVisits).forEach( ([trajId, coordses]) => {
         coordses.forEach(coords => {
           let heatmapPoint = this.getOrCreateHeatmapPoint(coords);
-          heatmapPoint.weight += 1;
-          heatmapPoint.weight = Math.min(100, heatmapPoint.weight);
+          //heatmapPoint.weight += 1;
+          //heatmapPoint.weight = Math.min(100, heatmapPoint.weight);
 
           const heatmapPointsData = [...Object.values(this.heatmapPointsByCellKey)];
           this.heatmapObj.setData(heatmapPointsData);

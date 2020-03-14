@@ -7,7 +7,7 @@
     "range_min": 5,
     "range_max": 500,
     "default": 50,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -19,7 +19,7 @@
     "range_max": 1,
     "default": 0.44,
     "probability_distribution_group": "HOUSEHOLD_TYPE_DISTRIBUTION",
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -31,7 +31,7 @@
     "range_max": 1,
     "default": 0.44,
     "probability_distribution_group": "HOUSEHOLD_TYPE_DISTRIBUTION",
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -43,7 +43,7 @@
     "range_max": 1,
     "default": 0.12,
     "probability_distribution_group": "HOUSEHOLD_TYPE_DISTRIBUTION",
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -54,7 +54,7 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.3,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -65,7 +65,7 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.3,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -76,7 +76,7 @@
     "range_min": 19,
     "range_max": 64,
     "default": 35,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -87,7 +87,7 @@
     "range_min": 0,
     "range_max": 10,
     "default": 2,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -98,7 +98,7 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.4,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -109,7 +109,7 @@
     "range_min": 1,
     "range_max": 10,
     "default": 3,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -120,7 +120,7 @@
     "range_min": 11,
     "range_max": 200,
     "default": 30,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -131,7 +131,7 @@
     "range_min": 65,
     "range_max": 100,
     "default": 72,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -142,7 +142,7 @@
     "range_min": 0,
     "range_max": 30,
     "default": 15,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -153,7 +153,7 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.5,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -164,7 +164,7 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.4,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -175,7 +175,7 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.05,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -186,7 +186,7 @@
     "range_min": 51,
     "range_max": 500,
     "default": 75,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -197,7 +197,7 @@
     "range_min": 5,
     "range_max": 50,
     "default": 10,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -209,7 +209,7 @@
     "range_max": 1,
     "default": 0.34,
     "probability_distribution_group": "WORKPLACE_TYPE_DISTRIBUTION",
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -221,7 +221,7 @@
     "range_max": 1,
     "default": 0.33,
     "probability_distribution_group": "WORKPLACE_TYPE_DISTRIBUTION",
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -233,7 +233,7 @@
     "range_max": 1,
     "default": 0.33,
     "probability_distribution_group": "WORKPLACE_TYPE_DISTRIBUTION",
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -244,7 +244,7 @@
     "range_min": 6,
     "range_max": 60,
     "default": 32,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -255,7 +255,7 @@
     "range_min": 6,
     "range_max": 40,
     "default": 20,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -266,7 +266,7 @@
     "range_min": 6,
     "range_max": 30,
     "default": 13,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -277,7 +277,7 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.5,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -318,7 +318,7 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.5,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
   },
   {
@@ -329,8 +329,18 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.07,
-    "param_group": "Population generator",
+    "param_group": "Population characteristics",
     "disabled": true
+  },
+  {
+    "key": "PROB_HEALTH_ISSUES",
+    "name": "Probability of health issues",
+    "description": "This is the probability that a sim is immunocompromised, has an underlying respiratory condition, or is otherwise especially vulnerable.",
+    "valuetype": "float",
+    "range_min": 0,
+    "range_max": 1,
+    "default": 0.07,
+    "param_group": "Population characteristics"
   },
   {
     "key": "PROB_CONTAMINATION_DECAY_HOUSEHOLD",
@@ -477,6 +487,16 @@
     "range_min": 0,
     "range_max": 30,
     "default": 14,
+    "param_group": "Virus characteristics"
+  },
+  {
+    "key": "HEALTH_ISSUE_VULNERABILITY_MULTIPLIER",
+    "name": "Health issue vulnerability multiplier",
+    "description": "Sims that have an underlying health issue (immunocompromised, respiratory disease, etc.) are this many times more likely to show symptoms and to develop complications if infected.",
+    "valuetype": "float",
+    "range_min": 1,
+    "range_max": 5,
+    "default": 3,
     "param_group": "Virus characteristics"
   },
   {

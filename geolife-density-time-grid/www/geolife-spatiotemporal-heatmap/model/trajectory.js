@@ -41,6 +41,11 @@ const trajectoryModel = {
   },
 
 
+  get trajectoryIds() {
+    return [...Object.keys(this.trajectories)];
+  },
+
+
   get gridparams() {
     if (!this.trajectoryData || !this.trajectoryData.gridparams) {
       return {};
