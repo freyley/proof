@@ -287,7 +287,7 @@
     "valuetype": "float",
     "range_min": 4,
     "range_max": 120,
-    "default": 30,
+    "default": 35,
     "param_group": "Mobile App"
   },
   {
@@ -301,13 +301,13 @@
     "param_group": "Mobile App"
   },
   {
-    "key": "STDDEV_AGE_APP_INSTALLED",
+    "key": "STDEV_AGE_APP_INSTALLED",
     "name": "Standard deviation of app installation age",
     "description": "This is the standard deviation of the adoption rate of the app based on age. Increasing this means a wider variety of ages are likely to install the app.",
     "valuetype": "float",
     "range_min": 0,
     "range_max": 100,
-    "default": 5,
+    "default": 15,
     "param_group": "Mobile App"
   },
   {
@@ -416,7 +416,7 @@
     "range_min": 1,
     "range_max": 14,
     "default": 6,
-    "param_group":"Virus characteristics"
+    "param_group": "Virus characteristics"
   },
   {
     "key": "PROB_SHOPPING_SELF_QUARANTINED",
@@ -486,7 +486,7 @@
     "valuetype": "float",
     "range_min": 0,
     "range_max": 30,
-    "default": 14,
+    "default": 2,
     "param_group": "Virus characteristics"
   },
   {
@@ -530,6 +530,16 @@
     "param_group": "Virus characteristics"
   },
   {
+    "key": "PROB_SICK_BECOMES_CRITICAL",
+    "name": "Probability of sickness going critical",
+    "description": "This is the probability that an otherwise healthy, non-elderly sim who gets sick will require intensive care for survival.",
+    "valuetype": "float",
+    "range_min": 0,
+    "range_max": 1,
+    "default": 0.5,
+    "param_group": "Virus characteristics"
+  },
+  {
     "key": "BOOL_REINFECTION",
     "name": "Toggle reinfection after recovery",
     "description": "When this is enabled, sims that have recovered from the virus can be infected again.",
@@ -537,16 +547,6 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0,
-    "param_group": "Virus characteristics"
-  },
-  {
-    "key": "MEAN_INFECTION_SICKNESS_DURATION",
-    "name": "Average sickness duration of infection",
-    "description": "This is the average time that a sim with the virus is sick. When it ends, the sim either recovers or enters critical condition.",
-    "valuetype": "float",
-    "range_min": 3,
-    "range_max": 30,
-    "default": 14,
     "param_group": "Virus characteristics"
   },
   {
@@ -574,9 +574,9 @@
     "name": "Average critical duration of infection",
     "description": "This is the average time that a sim with the virus is in critical condition. When it ends, the sim either recovers or dies.",
     "valuetype": "float",
-    "range_min": 3,
+    "range_min": 1,
     "range_max": 30,
-    "default": 7,
+    "default": 3,
     "param_group": "Virus characteristics"
   },
   {
@@ -604,9 +604,9 @@
     "name": "Average sickness duration of infection",
     "description": "This is the average time that a sim with the virus is sick. When it ends, the sim either recovers or enters critical condition.",
     "valuetype": "float",
-    "range_min": 3,
+    "range_min": 2,
     "range_max": 30,
-    "default": 14,
+    "default": 10,
     "param_group": "Virus characteristics"
   },
   {
@@ -668,16 +668,6 @@
     "range_max": 1,
     "default": 0.9,
     "param_group": "Mobile App"
-  },
-  {
-    "key": "MEAN_INFECTION_SICKNESS_DURATION",
-    "name": "Average sickness duration of infection",
-    "description": "This is the average time that a sim with the virus is sick. When it ends, the sim either recovers or enters critical condition.",
-    "valuetype": "float",
-    "range_min": 3,
-    "range_max": 30,
-    "default": 14,
-    "param_group": "Virus characteristics"
   },
   {
     "key": "PROB_INFECTED_SELF_QUARANTINE",

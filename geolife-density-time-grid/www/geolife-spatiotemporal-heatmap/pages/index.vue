@@ -162,11 +162,42 @@
     <v-row>
       <v-container>
         <v-data-table
+          class="siminfotable"
           :headers="simInfoTableHeaders"
           :items="epidemiologyModel.simInfoList"
           :items-per-page="25"
           :dense="true"
-        ></v-data-table>
+          :footer-props="simInfoTableFooterProps"
+        >
+          <template v-slot:item.id="{ item }">
+            <span :class="`siminfo-infectionstage-${item.infectionStage.name.toLowerCase()}`">
+              {{item.id}}
+            </span>
+          </template>
+          <template v-slot:item.complicationRisk="{ item }">
+            <span class="siminfo-complicationrisk"
+                :style="{color:gradientGreenYellowRed(item.complicationRisk)}">
+              {{ Math.floor(item.complicationRisk * 100) }}%
+            </span>
+          </template>
+          <template v-slot:item.infectionStage.name="{ item }">
+            <span :class="`siminfo-infectionstage-${item.infectionStage.name.toLowerCase()}`">
+              {{item.infectionStage.name}}
+            </span>
+          </template>
+          <template v-slot:item.infectionStage.contagious="{ item }">
+            <span v-if="item.infectionStage.contagious" class="siminfo-contagious">
+              <v-icon>mdi-account-tie-voice</v-icon>
+            </span>
+          </template>
+          <template v-slot:item.infectionStage.symptomatic="{ item }">
+            <span v-if="item.infectionStage.symptomatic" class="siminfo-symptomatic">
+              <v-icon>mdi-bed</v-icon>
+            </span>
+          </template>
+
+
+        </v-data-table>
       </v-container>
     </v-row>
   </v-layout>
@@ -229,6 +260,47 @@
       left: 2ex;
     }
   }
+
+  .siminfotable {
+    .text-end {
+      text-align: right !important;
+    }
+    .text-center {
+      text-align: center !important;
+    }
+
+    .siminfo-complicationrisk {
+      margin-left: auto;
+    }
+
+    .siminfo-infectionstage-healthy {
+      color: #00aa00;
+    }
+    .siminfo-infectionstage-recovered {
+      color: #00aa00;
+      font-weight: bold;
+    }
+    .siminfo-infectionstage-latent {
+      color: #aaaa00;
+      font-weight: bold;
+    }
+    .siminfo-infectionstage-asymptomatic {
+      color: #ffaa00;
+      font-weight: bold;
+    }
+    .siminfo-infectionstage-sick {
+      color: #ff4400;
+      font-weight: bold;
+    }
+    .siminfo-infectionstage-critical {
+      color: #cc0000;
+      font-weight: bold;
+    }
+    .siminfo-infectionstage-dead {
+      color: #000000;
+      font-weight: bold;
+    }
+  }
 }
 </style>
 
@@ -237,7 +309,11 @@ import trajectoryModel from '~/model/trajectory';
 import paramsModel from '~/model/params';
 import epidemiologyModel from '~/model/epidemiology';
 
+const colorInterpolate = require('color-interpolate');
+
+
 epidemiologyModel.paramsModel = paramsModel;
+
 
 export default {
   components: {
@@ -273,8 +349,20 @@ export default {
           align: 'start',
           value: 'id',
         },
-        { text: 'Infection Stage', value: 'infectionStage.name' }
-      ]
+        { text: 'Age', value: 'age' },
+        { text: 'Health Issues', value: 'healthProblems' },
+        { text: 'Compl. Risk', value: 'complicationRisk', align: 'end' },
+        { text: 'Infection Stage', value: 'infectionStage.name' },
+        { text: 'Contagious', value: 'infectionStage.contagious', align: 'center' },
+        { text: 'Symptomatic', value: 'infectionStage.symptomatic', align: 'center' },
+        { text: 'Days to Outcome', value: 'daysUntilOutcome', align: 'end' },
+      ],
+      simInfoTableFooterProps: {
+        'items-per-page-options': [10,25,50,-1]
+      },
+      gradientGreenYellowRed: colorInterpolate([
+        '#00aa00', '#aaaa00', '#aa4400', '#aa0000'
+      ])
     }
   },
 
@@ -308,7 +396,7 @@ export default {
       }
 
       epidemiologyModel.generateSimInfo(trajectoryModel.trajectoryIds);
-      epidemiologyModel.infect(this.patientZero);
+      epidemiologyModel.infect(this.patientZero, epidemiologyModel.INFECTION_STAGES.ASYMPTOMATIC);
     },
 
     loadData() {
@@ -343,6 +431,7 @@ export default {
         opacity: .9,
         maxIntensity: 20,
         gradient: [
+        'rgba(0, 255, 0, 0)',
         'rgba(255, 255, 0, 0)',
         'rgba(255, 255, 0, 1)',
         'rgba(255, 0, 0, 1)',
@@ -426,6 +515,8 @@ export default {
       if (this.currentTime > timeMax) {
         this.currentTime = timeMax;
       }
+
+      this.epidemiologyModel.timePass(this.timeIncrement);
     },
 
     play() {
@@ -438,15 +529,16 @@ export default {
       setTimeout(() => {
         this.play();
       }, 25);
-    }
+    },
   },
 
   mounted() {
   },
 
   watch: {
-    currentTime(value) {
+    currentTime(value, oldValue) {
       trajectoryModel.seek(this.currentTime);
+
       this.updateMap();
     }
   }

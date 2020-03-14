@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@nuxtjs/axios": "^5.3.6",
+    "color-interpolate": "^1.0.5",
     "nuxt": "^2.0.0",
+    "random-normal": "^1.0.0",
     "vue2-google-maps": "^0.10.7"
   },
   "devDependencies": {

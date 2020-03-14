@@ -38,7 +38,12 @@ const groupsList = (() => {
 
 
 const paramsModel = {
-  groups: groupsList
+  groups: groupsList,
+  get params() { return paramObjsByKey; },
+
+  value(paramKey) {
+    return paramObjsByKey[paramKey].value;
+  }
 };
 
 
