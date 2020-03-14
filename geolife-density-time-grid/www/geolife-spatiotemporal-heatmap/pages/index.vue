@@ -34,6 +34,19 @@
             {{trajectoryModel.durationDataLoad}} ms
           </v-alert>
 
+          <v-alert type="info" v-if="hoverParam">
+            <h3>{{hoverParam.name}}</h3>
+            <p>
+              {{hoverParam.description}}
+            </p>
+            <p>
+              Range: {{hoverParam.range_min}} - {{hoverParam.range_max}}<br/>
+              Default value: {{hoverParam.default}}
+            </p>
+            <p>
+              Current value: <strong>{{hoverParam.value}}</strong>
+            </p>
+          </v-alert>
 
           <GmapMap
             ref="mapRef"
@@ -51,16 +64,18 @@
         </div>
       </v-col>
 
-      <v-col>
-        <v-row v-if="!trajectoryModel.isDataLoaded">
-          <v-btn color="primary"
-              :loading="trajectoryModel.isDataLoading"
-              @click="loadData()">
-            Load Data
-          </v-btn>
-        </v-row>
+      <v-col class="d-flex flex-column">
+        <v-container v-if="!trajectoryModel.isDataLoaded" class="flex-grow-0">
+          <v-row>
+            <v-btn color="primary"
+                :loading="trajectoryModel.isDataLoading"
+                @click="loadData()">
+              Load Data
+            </v-btn>
+          </v-row>
+        </v-container>
 
-        <v-container class="column ml-2"
+        <v-container class="flex-grow-0"
             v-if="trajectoryModel.isDataLoaded">
 
           <v-row>
@@ -70,12 +85,14 @@
                 v-model="currentTime"
                 :min="trajectoryModel.timeRange.begin"
                 :max="trajectoryModel.timeRange.end"
+                :dense="true"
               ></v-slider>
               <v-slider
                 label="Playback speed"
                 v-model="timeIncrement"
                 :min="1 * 60"
                 :max="30 * 60"
+                :dense="true"
               ></v-slider>
             </v-col>
           </v-row>
@@ -105,12 +122,46 @@
           </v-row>
         </v-container>
 
+        <v-container class="flex-grow-1 param-sliders">
+          <v-row>
+            <v-expansion-panels accordion>
+              <v-expansion-panel
+                v-for="(group,iGroup) in paramsModel.groups"
+                :key="iGroup"
+              >
+                <v-expansion-panel-header>
+                  <span>
+                    <v-icon>mdi-tune</v-icon>
+                    {{group.name}}
+                  </span>
+                </v-expansion-panel-header>
+                <v-expansion-panel-content>
+                  <div v-for="(param, iParam) in group.params" :key="iParam"
+                      @mouseover="hoverParam = param"
+                      @mouseout="hoverParam = null"
+                  >
+                    <v-slider
+                      :hint="param.name"
+                      v-model="param.value"
+                      :min="param.range_min"
+                      :max="param.range_max"
+                      :persistent-hint="true"
+                      :dense="true"
+                      :thumb-label="true"
+                      :step="param.valuetype === 'integer' ? 1 : ((param.range_max - param.range_min) / 20)"
+                    ></v-slider>
+                  </div>
+                </v-expansion-panel-content>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </v-row>
+        </v-container>
       </v-col>
     </v-row>
   </v-layout>
 </template>
 
-<style scoped lang="scss">
+<style lang="scss">
 #covid19riskapp {
   .map-container {
     background: #ccc;
@@ -144,11 +195,35 @@
       border-radius: 1ex;
     }
   }
+
+  .param-sliders {
+    position: relative;
+    overflow: hidden;
+    overflow-y: auto;
+    min-height: 10em;
+
+    & > .row {
+      @media(min-width: 960px) {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+    }
+
+    .v-input__slider {
+      cursor: pointer;
+    }
+    .v-messages {
+      top: -6ex;
+      left: 2ex;
+    }
+  }
 }
 </style>
 
 <script>
 import trajectoryModel from '~/model/trajectory';
+import paramsModel from '~/model/params';
 
 
 export default {
@@ -157,6 +232,9 @@ export default {
 
   data() {
     return {
+      hoverParam: null,
+
+      paramsModel,
       trajectoryModel,
 
       patientZero: '000',

@@ -296,7 +296,7 @@
     "description": "This is the probability that a human of the average age of installation installs the app.",
     "valuetype": "float",
     "range_min": 0,
-    "range_max": 1,
+    "range_max": 1.0,
     "default": 0.6,
     "param_group": "Mobile App"
   },
@@ -402,9 +402,9 @@
     "key": "MEAN_VIRUS_SURFACE_LONGEVITY",
     "name": "How many days the virus lasts on surfaces",
     "description": "This is the mean number of days that the virus remains infectious from uncleaned surfaces such as doorknobs or handrails.",
-    "valuetype": "float",
-    "range_min": 0,
-    "range_max": 1,
+    "valuetype": "integer",
+    "range_min": 1,
+    "range_max": 14,
     "default": 6,
     "param_group":"Virus characteristics"
   },
@@ -635,7 +635,7 @@
     "description": "When an app user, is notified of an infection, the app will check this many days into the past for recorded contact with the infectee. If such contact was recorded, the user will be marked as exposed.",
     "valuetype": "integer",
     "range_min": 1,
-    "range_max": 365,
+    "range_max": 30,
     "default": 10,
     "param_group": "Mobile App"
   },

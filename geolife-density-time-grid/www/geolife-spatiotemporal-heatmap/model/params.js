@@ -1,5 +1,5 @@
 
-const epiModelParamsInfo = require('epi-model-params.json');
+const epiModelParamsInfo = require('./epi-model-params.json');
 
 const paramObjsByKey = {};
 const paramGroups = {};
@@ -20,25 +20,27 @@ epiModelParamsInfo.forEach(paramObj => {
   paramGroups[groupName].push(paramObj);
 });
 
+const groupsList = (() => {
+  let groupKeys = [...Object.keys(paramGroups)];
+
+  // If 'Miscellaneous' is a group, move it to the end.
+  if (groupKeys.includes('Miscellaneous')) {
+    groupKeys = groupKeys.filter(k => k !== 'Miscellaneous');
+    groupKeys.push('Miscellaneous');
+  }
+
+  const groupsWithParams = groupKeys.map(groupKey => ({
+    name: groupKey,
+    params: paramGroups[groupKey]
+  }));
+  return groupsWithParams;
+})();
+
 
 const paramsModel = {
-  get groups() {
-    let groupKeys = [...Object.keys(paramGroups)];
-
-    // If 'Miscellaneous' is a group, move it to the end.
-    if (groupKeys.includes('Miscellaneous')) {
-      groupKeys = groupKeys.filter(k => k !== 'Miscellaneous');
-      groupKeys.push('Miscellaneous');
-    }
-
-    const groupsWithParams = groupKeys.map(groupKey => ({
-      name: groupKey,
-      params: paramGroups[groupKey]
-    }));
-    return groupsWithParams;
-  }
+  groups: groupsList
 };
 
 
-export const paramsModel;
+export default paramsModel;
 
