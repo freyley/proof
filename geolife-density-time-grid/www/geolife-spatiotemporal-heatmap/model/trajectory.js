@@ -65,11 +65,7 @@ const trajectoryModel = {
 
 
   initialRecord(trajId) {
-    if (!this.trajectoryData ||
-      !this.trajectoryData.trajectories) {
-      return null;
-    }
-    const trajectory = this.trajectoryData.trajectories[trajId];
+    const trajectory = this.trajectories[trajId];
     if (!trajectory || !trajectory.length) {
       return null;
     }
@@ -91,11 +87,11 @@ const trajectoryModel = {
   // Returns a collection of all trajectory locations at the current seek time position.
   get locations() {
     const trajLocations = {};
-    Object.keys(this.trajectoryData.trajectories).forEach(trajId => {
+    Object.keys(this.trajectories).forEach(trajId => {
       trajLocations[trajId] = null;
 
       const iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
-      const trajRecord = this.trajectoryData.trajectories[trajId][iTrajRec];
+      const trajRecord = this.trajectories[trajId][iTrajRec];
 
       if (!trajRecord) {
         console.log('Something is wrong');

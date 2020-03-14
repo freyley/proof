@@ -2,6 +2,7 @@
 
 const epidemiologyModel = {
   reset() {
+    this.simInfectionState = {};
   }
 };
 
