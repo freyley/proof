@@ -15,6 +15,7 @@
     "color-interpolate": "^1.0.5",
     "nuxt": "^2.0.0",
     "random-normal": "^1.0.0",
+    "shuffle-array": "^1.0.1",
     "vue2-google-maps": "^0.10.7"
   },
   "devDependencies": {

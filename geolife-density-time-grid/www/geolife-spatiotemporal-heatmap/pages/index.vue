@@ -185,6 +185,11 @@
               {{item.infectionStage.name}}
             </span>
           </template>
+          <template v-slot:item.infectionStage.infected="{ item }">
+            <span v-if="item.infectionStage.infected" class="siminfo-infected">
+              <v-icon>mdi-biohazard</v-icon>
+            </span>
+          </template>
           <template v-slot:item.infectionStage.contagious="{ item }">
             <span v-if="item.infectionStage.contagious" class="siminfo-contagious">
               <v-icon>mdi-account-tie-voice</v-icon>
@@ -327,7 +332,6 @@ export default {
       trajectoryModel,
       epidemiologyModel,
 
-      patientZero: '000',
       googleMapObject: null,
 
       currentTime: 0,
@@ -353,8 +357,10 @@ export default {
         { text: 'Health Issues', value: 'healthProblems' },
         { text: 'Compl. Risk', value: 'complicationRisk', align: 'end' },
         { text: 'Infection Stage', value: 'infectionStage.name' },
+        { text: 'Infected', value: 'infectionStage.infected', align: 'center' },
         { text: 'Contagious', value: 'infectionStage.contagious', align: 'center' },
         { text: 'Symptomatic', value: 'infectionStage.symptomatic', align: 'center' },
+        { text: 'Days Infected', value: 'daysInfected', align: 'end' },
         { text: 'Days to Outcome', value: 'daysUntilOutcome', align: 'end' },
       ],
       simInfoTableFooterProps: {
@@ -386,7 +392,10 @@ export default {
     },
 
     resetWithData() {
-      const patientZeroInitialRecord = trajectoryModel.initialRecord(this.patientZero);
+      epidemiologyModel.generateSimInfo(trajectoryModel.trajectoryIds);
+      const patientZeroes = epidemiologyModel.infectPatientZeroes();
+
+      const patientZeroInitialRecord = trajectoryModel.initialRecord(patientZeroes[0].id);
       this.currentTime = patientZeroInitialRecord.timeInCell.begin;
       this.mapInitCenter = patientZeroInitialRecord.location;
 
@@ -394,16 +403,12 @@ export default {
       if (this.heatmapObj) {
         this.heatmapObj.setData([]);
       }
-
-      epidemiologyModel.generateSimInfo(trajectoryModel.trajectoryIds);
-      epidemiologyModel.infect(this.patientZero, epidemiologyModel.INFECTION_STAGES.ASYMPTOMATIC);
     },
 
     loadData() {
       this.reset();
       trajectoryModel.load(this.$axios, {
-        dbgOnlyKeepFirstNTrajectories: false,
-        patientZero: this.patientZero
+        dbgOnlyKeepFirstNTrajectories: false
       }).then(() => {
         this.resetWithData();
 

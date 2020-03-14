@@ -1,5 +1,6 @@
 
 import * as mathHelpers from './math-helpers';
+const shuffle = require("shuffle-array");
 
 /*
 Infection state follows this state transition diagram.
@@ -136,7 +137,7 @@ const INFECTION_STAGES = {
     name: "Recovered",
     description: "Made full recovery, now immunocompetent, cannot be reinfected",
     infectable: false,
-    infected: true,
+    infected: false,
     contagious: false,
     symptomatic: false,
     critical: true
@@ -183,6 +184,15 @@ const epidemiologyModel = {
         }
         return Math.floor((this.outcomeAtSimSeconds - this.infectedAtSimSeconds) / SEC_PER_DAY);
       },
+      get daysInfected() {
+        if (this.infectedAtSimSeconds === null) {
+          return null;
+        }
+        if (this.daysUntilOutcome !== null) {
+          return this.daysUntilOutcome;
+        }
+        return Math.floor((epidemiologyModel.totalSeconds - this.infectedAtSimSeconds) / SEC_PER_DAY);
+      },
 
       age: mathHelpers.randomNormalWithCutoff(
         this.paramsModel.value('MEAN_AGE_APP_INSTALLED'),
@@ -192,7 +202,12 @@ const epidemiologyModel = {
         true
       ),
 
-      healthProblems: []
+      healthProblems: [],
+
+      magnifyRisk(prob) {
+        const probMagnified = 1 - ((1 - prob) * (1 - this.complicationRisk));
+        return probMagnified;
+      }
     };
 
     // Add health problems.
@@ -236,16 +251,28 @@ const epidemiologyModel = {
   },
 
 
-  infect(simId, forceStage) {
+  infect(sim, forceStage) {
+    if (typeof sim === 'string') {
+      sim = this.simInfo[sim];
+    }
     if (!forceStage && (
           sim.infectionStage.key === "RECOVERED" ||
           sim.infectionStage.key === "DEAD")) {
       // Can't infect the recovered or the dead.
       return;
     }
-    const sim = this.simInfo[simId];
     sim.infectionStage = forceStage || INFECTION_STAGES.LATENT;
     sim.infectedAtSimSeconds = this.totalSeconds;
+  },
+
+
+  infectPatientZeroes() {
+    const numPatientZeros = this.paramsModel.value("NUM_PATIENT_ZEROES");
+    let simsToInfect = shuffle([...Object.values(this.simInfo)]).slice(0, numPatientZeros);
+    simsToInfect.forEach(sim => {
+      this.infect(sim, INFECTION_STAGES.ASYMPTOMATIC);
+    });
+    return simsToInfect;
   },
 
 
@@ -255,7 +282,7 @@ const epidemiologyModel = {
 
     let baseRisk =
       sim.age < 50
-        ? mathHelpers.linearInterpolate(sim.age, 0, 0, 50, riskAge50)
+        ? mathHelpers.linearInterpolate(sim.age, 20, 0, 50, riskAge50)
         : mathHelpers.linearInterpolate(sim.age, 50, riskAge50, 90, riskAge90);
     baseRisk = Math.min(baseRisk, 1);
     baseRisk = Math.max(baseRisk, 0);
@@ -275,29 +302,43 @@ const epidemiologyModel = {
         sim.infectionStage.key === "DEAD") {
       // Nothing to do here!
       return;
-    } else if (sim.infectionStage.key === "LATENT") {
+    }
+    else if (sim.infectionStage.key === "LATENT") {
       const meanDays = this.paramsModel.value("MEAN_INFECTION_LATENCY_DURATION");
       if (mathHelpers.pcheckPoisson(seconds, meanDays*SEC_PER_DAY)) {
-        // TODO: Roll for asymptomatic
-        sim.infectionStage = INFECTION_STAGES.SICK;
+        let pWorse = 1.0 - this.paramsModel.value("PROB_ASYMPTOMATIC_INFECTION");
+        pWorse = sim.magnifyRisk(pWorse);
+        sim.infectionStage = mathHelpers.pcheck(pWorse)
+          ? INFECTION_STAGES.SICK
+          : INFECTION_STAGES.ASYMPTOMATIC;
       }
-    } else if (sim.infectionStage.key === "ASYMPTOMATIC") {
+    }
+    else if (sim.infectionStage.key === "ASYMPTOMATIC") {
       const meanDays = this.paramsModel.value("MEAN_INFECTION_ASYMPTOMATIC_DURATION");
       if (mathHelpers.pcheckPoisson(seconds, meanDays*SEC_PER_DAY)) {
-        // TODO: Roll for recovery
-        sim.infectionStage = INFECTION_STAGES.SICK;
+        let pWorse = 1 - this.paramsModel.value("PROB_ASYMPTOMATIC_RECOVERY");
+        pWorse = sim.magnifyRisk(pWorse);
+        sim.infectionStage = mathHelpers.pcheck(pWorse)
+          ? INFECTION_STAGES.SICK
+          : INFECTION_STAGES.RECOVERED;
       }
     } else if (sim.infectionStage.key === "SICK") {
       const meanDays = this.paramsModel.value("MEAN_INFECTION_SICKNESS_DURATION");
       if (mathHelpers.pcheckPoisson(seconds, meanDays*SEC_PER_DAY)) {
-        // TODO: Roll for critical
-        sim.infectionStage = INFECTION_STAGES.CRITICAL;
+        let pWorse = this.paramsModel.value("PROB_SICK_BECOMES_CRITICAL");
+        pWorse = sim.magnifyRisk(pWorse);
+        sim.infectionStage = mathHelpers.pcheck(pWorse)
+          ? INFECTION_STAGES.CRITICAL
+          : INFECTION_STAGES.RECOVERED;
       }
     } else if (sim.infectionStage.key === "CRITICAL") {
       const meanDays = this.paramsModel.value("MEAN_INFECTION_CRITICAL_DURATION");
       if (mathHelpers.pcheckPoisson(seconds, meanDays*SEC_PER_DAY)) {
-        // TODO: Roll for death
-        sim.infectionStage = INFECTION_STAGES.DEAD;
+        let pWorse = this.paramsModel.value("PROB_CRITICAL_MORTALITY");
+        pWorse = sim.magnifyRisk(pWorse);
+        sim.infectionStage = mathHelpers.pcheck(pWorse)
+          ? INFECTION_STAGES.DEAD
+          : INFECTION_STAGES.RECOVERED;
       }
     }
 

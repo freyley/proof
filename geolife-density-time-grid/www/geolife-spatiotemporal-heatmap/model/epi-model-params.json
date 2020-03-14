@@ -440,6 +440,16 @@
     "param_group": "Human response to viral threat"
   },
   {
+    "key": "NUM_PATIENT_ZEROES",
+    "name": "Number of Patient Zeroes",
+    "description": "How many sims are infected at the start of the simulation. Patient Zero infections always start as asymptomatic.",
+    "valuetype": "integer",
+    "range_min": 1,
+    "range_max": 20,
+    "default": 5,
+    "param_group": "Virus characteristics"
+  },
+  {
     "key": "PROB_CATCH_FROM_LOCATION",
     "name": "Probability of catching virus from location",
     "description": "This is the probability that a sim in prolonged contact with a contaminated location catches the virus.",
