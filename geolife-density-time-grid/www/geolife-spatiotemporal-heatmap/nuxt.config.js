@@ -30,7 +30,10 @@ export default {
   /*
    ** Plugins to load before mounting the App
    */
-  plugins: [{ src: "@/plugins/google-maps", mode: "client" }],
+  plugins: [
+    { src: "@/plugins/google-maps", mode: "client" },
+    { src: "@/plugins/vue-plotly", mode: "client" }
+  ],
   /*
    ** Nuxt.js dev-modules
    */
@@ -50,9 +53,10 @@ export default {
    ** See https://axios.nuxtjs.org/options
    */
   axios: {
-    baseURL: process.env.NODE_ENV === 'production' ?
-      "https://www.covid19risk.com/heatmap/" :
-      "http://localhost:3000/heatmap/"
+    baseURL:
+      process.env.NODE_ENV === "production"
+        ? "https://www.covid19risk.com/heatmap/"
+        : "http://localhost:3000/heatmap/"
   },
   /*
    ** vuetify module configuration

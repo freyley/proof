@@ -12,11 +12,12 @@
   },
   "dependencies": {
     "@nuxtjs/axios": "^5.3.6",
+    "@statnett/vue-plotly": "^0.3.2",
     "color-interpolate": "^1.0.5",
     "nuxt": "^2.0.0",
+    "plotly.js": "^1.52.3",
     "random-normal": "^1.0.0",
     "shuffle-array": "^1.0.1",
-    "vue-plotly": "^1.1.0",
     "vue2-google-maps": "^0.10.7"
   },
   "devDependencies": {

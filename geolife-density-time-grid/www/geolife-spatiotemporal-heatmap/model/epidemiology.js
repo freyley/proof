@@ -147,6 +147,15 @@ Object.entries(INFECTION_STAGES).forEach( ([key, stage]) => {
   stage.key = key;
 });
 
+const INFECTION_STAGES_ORDER = [
+  'HEALTHY',
+  'RECOVERED',
+  'LATENT',
+  'ASYMPTOMATIC',
+  'SICK',
+  'CRITICAL',
+  'DEAD'
+];
 
 const UNDERLYING_HEALTH_CONDITIONS = [
   'Smoker',
@@ -163,10 +172,10 @@ const SEC_PROLONGED_CONTACT = 60 * 5;
 
 const epidemiologyModel = {
   INFECTION_STAGES,
+  INFECTION_STAGES_ORDER,
 
   paramsModel: null,
   trajectoryModel: null,
-
 
   reset() {
     this.totalSeconds = 0;
@@ -174,6 +183,9 @@ const epidemiologyModel = {
     this.cellContamination = {};
   },
 
+  get totalDays() {
+    return this.totalSeconds / SEC_PER_DAY;
+  },
 
   createSim(simId) {
     const sim = {
@@ -252,14 +264,12 @@ const epidemiologyModel = {
     return sim;
   },
 
-
   get simInfoList() {
     const keys = [...Object.keys(this.simInfo)];
     keys.sort();
     const retval = keys.map(k => this.simInfo[k]);
     return retval;
   },
-
 
   generateSimInfo(simIds) {
     if (!this.paramsModel) {
@@ -269,7 +279,6 @@ const epidemiologyModel = {
       this.simInfo[simId] = this.createSim(simId);
     });
   },
-
 
   infect(sim, forceStage) {
     if (typeof sim === "string") {
@@ -287,7 +296,6 @@ const epidemiologyModel = {
     sim.infectedAtSimSeconds = this.totalSeconds;
   },
 
-
   infectPatientZeroes() {
     const numPatientZeros = this.paramsModel.value("NUM_PATIENT_ZEROES");
     let simsToInfect = shuffle([...Object.values(this.simInfo)]).slice(
@@ -299,7 +307,6 @@ const epidemiologyModel = {
     });
     return simsToInfect;
   },
-
 
   computeComplicationsRisk(sim) {
     const riskAge50 = this.paramsModel.value("PROB_COMPLICATIONS_AGE_50");
@@ -319,7 +326,6 @@ const epidemiologyModel = {
     const risk = 1 - (1 - baseRisk) / (1 + riskMagnificationFactor);
     return risk;
   },
-
 
   computeInfectionStageProgress(sim, seconds) {
     if (
@@ -394,12 +400,10 @@ const epidemiologyModel = {
     }
   },
 
-
   getCellKey(location) {
     const cellkey = `${location.lat},${location.lng}`;
     return cellkey;
   },
-
 
   getOrCreateContaminationCell(location) {
     const cellkey = this.getCellKey(location);
@@ -414,7 +418,6 @@ const epidemiologyModel = {
     }
     return cellRecord;
   },
-
 
   computeCellContamination(sim, seconds) {
     // If the sim isn't contagious or if they are self-quarantining,
@@ -444,7 +447,7 @@ const epidemiologyModel = {
     // there, so there's no sense harping on moot points.
     const probContam =
       (this.paramsModel.value("PROB_CONTAMINATE") * seconds) /
-      (SEC_PROLONGED_CONTACT);
+      SEC_PROLONGED_CONTACT;
     locationsVisited.forEach(location => {
       if (!mathHelpers.pcheck(probContam)) {
         return;
@@ -453,7 +456,6 @@ const epidemiologyModel = {
       cell.contaminationLevel++;
     });
   },
-
 
   catchInfectionsFromLocations(sim, seconds) {
     // If the sim isn't infectable or is quarantined, then
@@ -476,7 +478,7 @@ const epidemiologyModel = {
     // Determine whether or not the sim has passed through any contaminated cells.
     const probCatch =
       (this.paramsModel.value("PROB_CATCH_FROM_LOCATION") * seconds) /
-      (SEC_PROLONGED_CONTACT);
+      SEC_PROLONGED_CONTACT;
     locationsVisited.forEach(location => {
       const cellkey = `${location.lat},${location.lng}`;
       const cellRecord = this.cellContamination[cellkey];
@@ -484,14 +486,14 @@ const epidemiologyModel = {
         return;
       }
       // Magnify the catch probability by the contamination level
-      const probCatchThisCell = 1 - ((1 - probCatch) / cellRecord.contaminationLevel)
+      const probCatchThisCell =
+        1 - (1 - probCatch) / cellRecord.contaminationLevel;
       if (!mathHelpers.pcheck(probCatchThisCell)) {
         return;
       }
       this.infect(sim);
     });
   },
-
 
   allCatchInfectionsFromInfectees(seconds) {
     // We don't model non-app users, so we have to assume that they are
@@ -502,8 +504,8 @@ const epidemiologyModel = {
 
     // How many people has each sim interacted with in this time period?
     const numPeopleInteractedWith =
-        this.paramsModel.value("NUM_PROLONGED_INTERACTIONS_PER_DAY") * seconds /
-            SEC_PER_DAY;
+      (this.paramsModel.value("NUM_PROLONGED_INTERACTIONS_PER_DAY") * seconds) /
+      SEC_PER_DAY;
 
     // Assume app users are representative of the overall population.
     const numInfecteesInteractedWith = numPeopleInteractedWith * fracContagious;
@@ -512,7 +514,8 @@ const epidemiologyModel = {
 
     // The probability of catching it from somebody is
     // 1 - the probability of not catching it from everybody.
-    const probCatcFromAtLeastOne = 1 - Math.pow(1 - probEachCatch, numInfecteesInteractedWith);
+    const probCatcFromAtLeastOne =
+      1 - Math.pow(1 - probEachCatch, numInfecteesInteractedWith);
 
     Object.values(this.simInfo).forEach(sim => {
       // If the sim isn't infectable or is quarantined, then
@@ -527,7 +530,6 @@ const epidemiologyModel = {
     });
   },
 
-
   get heatmapPoints() {
     const arr = [...Object.values(this.cellContamination)].map(cell => ({
       location: new google.maps.LatLng(cell.location.lat, cell.location.lng),
@@ -535,7 +537,6 @@ const epidemiologyModel = {
     }));
     return arr;
   },
-
 
   get fractionUsersContagious() {
     let numUsersContagious = 0;
@@ -547,7 +548,6 @@ const epidemiologyModel = {
     });
     return numUsersContagious / simInfos.length;
   },
-
 
   timePass(seconds) {
     this.totalSeconds += seconds;
@@ -561,19 +561,9 @@ const epidemiologyModel = {
     });
   },
 
-
   get conditionReport() {
-    const reportOrder = [
-      'HEALTHY',
-      'RECOVERED',
-      'LATENT',
-      'ASYMPTOMATIC',
-      'SICK',
-      'CRITICAL',
-      'DEAD'
-    ];
     const sims = [...Object.values(this.simInfo)];
-    const report = reportOrder.map(k => {
+    const report = INFECTION_STAGES_ORDER.map(k => {
       let numSimsWithCondition = 0;
       sims.forEach(sim => {
         if (sim.infectionStage.key === k) {

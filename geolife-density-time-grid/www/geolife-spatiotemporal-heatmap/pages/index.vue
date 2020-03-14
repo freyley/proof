@@ -208,21 +208,34 @@
 
     <v-row>
       <v-container>
-        <v-col cols="12" md="6" lg="3">
-          <v-data-table
-            class="conditionreport-table"
-            :headers="conditionReportHeaders"
-            :items="epidemiologyModel.conditionReport"
-            :items-per-page="25"
-            :dense="true"
-          >
-            <template v-slot:item.popfrac="{ item }">
-              <span>
-                {{ Math.floor(item.popfrac * 100) }}%
-              </span>
-            </template>
-          </v-data-table>
-        </v-col>
+        <v-row>
+          <v-col cols="12" md="6" lg="3">
+            <v-data-table
+              class="conditionreport-table"
+              :headers="conditionReportHeaders"
+              :items="epidemiologyModel.conditionReport"
+              :items-per-page="25"
+              :dense="true"
+            >
+              <template v-slot:item.popfrac="{ item }">
+                <span>
+                  {{ Math.floor(item.popfrac * 100) }}%
+                </span>
+              </template>
+            </v-data-table>
+          </v-col>
+          <v-col style="position:relative; min-height:12em;">
+            <div class="plotlyholder">
+              <vue-plotly
+                  ref="plotlygraph"
+                  v-if="epidemiologyModel.totalSeconds > 0"
+                  :data="plotlydata"
+                  :layout="plotlylayout"
+                  :autoResize="true"
+                  :display-mode-bar="false"></vue-plotly>
+            </div>
+          </v-col>
+        </v-row>
       </v-container>
     </v-row>
   </v-layout>
@@ -327,6 +340,14 @@
       font-weight: bold;
     }
   }
+
+  .plotlyholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
 }
 </style>
 
@@ -340,6 +361,17 @@ const colorInterpolate = require('color-interpolate');
 
 epidemiologyModel.paramsModel = paramsModel;
 epidemiologyModel.trajectoryModel = trajectoryModel;
+
+
+const INFECTION_STAGE_COLORS = {
+  HEALTHY: '#00aa00',
+  RECOVERED: '#00aa00',
+  LATENT: '#aaaa00',
+  ASYMPTOMATIC: '#ffaa00',
+  SICK: '#ff4400',
+  CRITICAL: '#cc0000',
+  DEAD: '#000000'
+};
 
 
 export default {
@@ -395,7 +427,14 @@ export default {
       conditionReportHeaders: [
         {text: 'Condition', value: 'name'},
         {text: 'Population', value: 'popfrac', align: 'end'}
-      ]
+      ],
+
+      plotlydata: [],
+      plotlylayout: {
+        title: 'Infection stage prevalence over time',
+        xaxis: {range: [0,30], title:"Days"},
+        yaxis: {range: [0,1], title:"Population %"}
+      }
     }
   },
 
@@ -413,6 +452,22 @@ export default {
       this.mapMarkersByTrajId = {};
       this.heatmapPointsByCellKey = {};
       this.heatmapObj = null;
+
+      this.plotlydata = epidemiologyModel.INFECTION_STAGES_ORDER.map(k => {
+        const infectionStage = epidemiologyModel.INFECTION_STAGES[k];
+        return {
+          type: 'scatter',
+          x: [],
+          y: [],
+          mode: 'lines',
+          name: infectionStage.name,
+          infectionStageKey: k,
+          line: {
+            width: 2,
+            color: INFECTION_STAGE_COLORS[k]
+          }
+        }
+      });
 
       trajectoryModel.reset();
       epidemiologyModel.reset();
@@ -534,6 +589,15 @@ export default {
       this.updateHeatmap();
     },
 
+    updatePlotly() {
+      const report = epidemiologyModel.conditionReport;
+      this.plotlydata.forEach( (trace, iTrace) => {
+        const reportField = report[iTrace];
+        trace.x.push(epidemiologyModel.totalDays);
+        trace.y.push(reportField.popfrac);
+      });
+    },
+
     advanceTime() {
       const timeMax = trajectoryModel.timeRange.end;
       this.currentTime += this.timeIncrement;
@@ -545,6 +609,7 @@ export default {
       epidemiologyModel.timePass(this.timeIncrement);
 
       this.updateMap();
+      this.updatePlotly();
     },
 
     play() {
