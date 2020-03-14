@@ -456,7 +456,7 @@
     "valuetype": "float",
     "range_min": 0,
     "range_max": 1,
-    "default": 0.05,
+    "default": 0.1,
     "param_group": "Virus characteristics"
   },
   {
@@ -487,7 +487,8 @@
     "range_min": 0,
     "range_max": 1,
     "default": 0.1,
-    "param_group": "Virus characteristics"
+    "param_group": "Virus characteristics",
+    "disabled": true
   },
   {
     "key": "MEAN_INFECTION_LATENCY_DURATION",

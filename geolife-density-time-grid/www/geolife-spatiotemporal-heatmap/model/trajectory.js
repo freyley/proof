@@ -99,8 +99,7 @@ const trajectoryModel = {
       const trajRecord = this.trajectories[trajId][iTrajRec];
 
       if (!trajRecord) {
-        console.log('Something is wrong');
-        debugger;
+        return;
       }
 
       // Make sure that the record represents a valid present location.
@@ -120,45 +119,42 @@ const trajectoryModel = {
   },
 
 
-  // Returns a map of trajIds showing all of the locations each one has
+  // Returns a list of the locations the given trajId has
   // been in since timespanSeconds ago.
-  locationsInLastTimeInterval(timespanSeconds) {
+  locationsInLastTimeInterval(trajId, timespanSeconds) {
     const tSince = this.seekUnixtime - timespanSeconds;
-    const trajIds = [...Object.keys(this.trajectories)];
+    const trajectory = this.trajectories[trajId];
+    if (!trajectory) {
+      return [];
+    }
 
-    const cellVisitsByTrajId = {};
-    trajIds.forEach(trajId => {
-      cellVisitsByTrajId[trajId] = [];
-    });
-
-    Object.entries(this.trajectories).forEach( ([trajId, trajectory]) => {
-      let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
-      if (!iTrajRec && iTrajRec !== 0) {
-        // iTrajRec is null or undefined. That means no cells. Skip this trajId
-        return;
+    const locationsVisited = [];
+    let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
+    if (!iTrajRec && iTrajRec !== 0) {
+      // iTrajRec is null or undefined. That means no cells. Skip this trajId
+      return;
+    }
+    for (; iTrajRec>=0; iTrajRec--) {
+      const trajRec = trajectory[iTrajRec];
+      if (trajRec[1] < tSince) {
+        // This record ended before our last time interval began.
+        // We shouldn't bother backing up any more.
+        break;
       }
-      for (; iTrajRec>=0; iTrajRec--) {
-        const trajRec = trajectory[iTrajRec];
-        if (trajRec[1] < tSince) {
-          // This record ended before our last time interval began.
-          // We shouldn't bother backing up any more.
-          break;
-        }
-        if (trajRec[0] > this.seekUnixtime) {
-          // This record starts after our current seek time, so it's in the future.
-          // Don't record this one, but continue backing up.
-          continue;
-        }
-        // If we got here, then this record represents a cell that the trajectory
-        // visited since the time interval.
-        const location = {
-          lat: trajRec[2],
-          lng: trajRec[3],
-        };
-        cellVisitsByTrajId[trajId].push(location);
+      if (trajRec[0] > this.seekUnixtime) {
+        // This record starts after our current seek time, so it's in the future.
+        // Don't record this one, but continue backing up.
+        continue;
       }
-    });
-    return cellVisitsByTrajId;
+      // If we got here, then this record represents a cell that the trajectory
+      // visited since the time interval.
+      const location = {
+        lat: trajRec[2],
+        lng: trajRec[3],
+      };
+      locationsVisited.push(location);
+    };
+    return locationsVisited;
   },
 
 

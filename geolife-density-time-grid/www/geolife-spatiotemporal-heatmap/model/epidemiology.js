@@ -135,7 +135,7 @@ const INFECTION_STAGES = {
   },
   RECOVERED: {
     name: "Recovered",
-    description: "Made full recovery, now immunocompetent, cannot be reinfected",
+    description: "Made full recovery, became immunocompetent, cannot be reinfected",
     infectable: false,
     infected: false,
     contagious: false,
@@ -157,17 +157,21 @@ const UNDERLYING_HEALTH_CONDITIONS = [
 ];
 
 
-const SEC_PER_DAY = 60*60*24;
-
+const SEC_PER_HOUR = 60 * 60;
+const SEC_PER_DAY = SEC_PER_HOUR * 24;
+const SEC_PROLONGED_CONTACT = 60 * 5;
 
 const epidemiologyModel = {
   INFECTION_STAGES,
 
   paramsModel: null,
+  trajectoryModel: null,
+
 
   reset() {
     this.totalSeconds = 0;
     this.simInfo = {};
+    this.cellContamination = {};
   },
 
 
@@ -175,14 +179,22 @@ const epidemiologyModel = {
     const sim = {
       id: simId,
       infectionStage: INFECTION_STAGES.HEALTHY,
+
       infectedAtSimSeconds: null,
       outcomeAtSimSeconds: null,
       get daysUntilOutcome() {
-        if (this.infectedAtSimSeconds === null ||
-            this.outcomeAtSimSeconds === null) {
+        if (
+          this.infectedAtSimSeconds === null ||
+          this.outcomeAtSimSeconds === null
+        ) {
           return null;
         }
-        return Math.floor((this.outcomeAtSimSeconds - this.infectedAtSimSeconds) / SEC_PER_DAY);
+        return (
+          1 +
+          Math.floor(
+            (this.outcomeAtSimSeconds - this.infectedAtSimSeconds) / SEC_PER_DAY
+          )
+        );
       },
       get daysInfected() {
         if (this.infectedAtSimSeconds === null) {
@@ -191,12 +203,18 @@ const epidemiologyModel = {
         if (this.daysUntilOutcome !== null) {
           return this.daysUntilOutcome;
         }
-        return Math.floor((epidemiologyModel.totalSeconds - this.infectedAtSimSeconds) / SEC_PER_DAY);
+        return (
+          1 +
+          Math.floor(
+            (epidemiologyModel.totalSeconds - this.infectedAtSimSeconds) /
+              SEC_PER_DAY
+          )
+        );
       },
 
       age: mathHelpers.randomNormalWithCutoff(
-        this.paramsModel.value('MEAN_AGE_APP_INSTALLED'),
-        this.paramsModel.value('STDEV_AGE_APP_INSTALLED'),
+        this.paramsModel.value("MEAN_AGE_APP_INSTALLED"),
+        this.paramsModel.value("STDEV_AGE_APP_INSTALLED"),
         18,
         85,
         true
@@ -205,9 +223,11 @@ const epidemiologyModel = {
       healthProblems: [],
 
       magnifyRisk(prob) {
-        const probMagnified = 1 - ((1 - prob) * (1 - this.complicationRisk));
+        const probMagnified = 1 - (1 - prob) * (1 - this.complicationRisk);
         return probMagnified;
-      }
+      },
+
+      isQuarantined: false
     };
 
     // Add health problems.
@@ -243,7 +263,7 @@ const epidemiologyModel = {
 
   generateSimInfo(simIds) {
     if (!this.paramsModel) {
-      throw new Error('paramsModel must be set first.');
+      throw new Error("paramsModel must be set first.");
     }
     simIds.forEach(simId => {
       this.simInfo[simId] = this.createSim(simId);
@@ -252,12 +272,14 @@ const epidemiologyModel = {
 
 
   infect(sim, forceStage) {
-    if (typeof sim === 'string') {
+    if (typeof sim === "string") {
       sim = this.simInfo[sim];
     }
-    if (!forceStage && (
-          sim.infectionStage.key === "RECOVERED" ||
-          sim.infectionStage.key === "DEAD")) {
+    if (
+      !forceStage &&
+      (sim.infectionStage.key === "RECOVERED" ||
+        sim.infectionStage.key === "DEAD")
+    ) {
       // Can't infect the recovered or the dead.
       return;
     }
@@ -268,7 +290,10 @@ const epidemiologyModel = {
 
   infectPatientZeroes() {
     const numPatientZeros = this.paramsModel.value("NUM_PATIENT_ZEROES");
-    let simsToInfect = shuffle([...Object.values(this.simInfo)]).slice(0, numPatientZeros);
+    let simsToInfect = shuffle([...Object.values(this.simInfo)]).slice(
+      0,
+      numPatientZeros
+    );
     simsToInfect.forEach(sim => {
       this.infect(sim, INFECTION_STAGES.ASYMPTOMATIC);
     });
@@ -289,33 +314,38 @@ const epidemiologyModel = {
 
     // Magnify their risk by their number of health issues.
     const riskMagnificationFactor =
-        this.paramsModel.value("PROB_COMPLICATIONS_AGE_90") *
-        sim.healthProblems.length;
-    const risk = 1 - ((1 - baseRisk) / (1 + riskMagnificationFactor));
+      this.paramsModel.value("PROB_COMPLICATIONS_AGE_90") *
+      sim.healthProblems.length;
+    const risk = 1 - (1 - baseRisk) / (1 + riskMagnificationFactor);
     return risk;
   },
 
 
   computeInfectionStageProgress(sim, seconds) {
-    if (sim.infectionStage.key === "HEALTHY" ||
-        sim.infectionStage.key === "RECOVERED" ||
-        sim.infectionStage.key === "DEAD") {
+    if (
+      sim.infectionStage.key === "HEALTHY" ||
+      sim.infectionStage.key === "RECOVERED" ||
+      sim.infectionStage.key === "DEAD"
+    ) {
       // Nothing to do here!
       return;
-    }
-    else if (sim.infectionStage.key === "LATENT") {
-      const meanDays = this.paramsModel.value("MEAN_INFECTION_LATENCY_DURATION");
-      if (mathHelpers.pcheckPoisson(seconds, meanDays*SEC_PER_DAY)) {
-        let pWorse = 1.0 - this.paramsModel.value("PROB_ASYMPTOMATIC_INFECTION");
+    } else if (sim.infectionStage.key === "LATENT") {
+      const meanDays = this.paramsModel.value(
+        "MEAN_INFECTION_LATENCY_DURATION"
+      );
+      if (mathHelpers.pcheckPoisson(seconds, meanDays * SEC_PER_DAY)) {
+        let pWorse =
+          1.0 - this.paramsModel.value("PROB_ASYMPTOMATIC_INFECTION");
         pWorse = sim.magnifyRisk(pWorse);
         sim.infectionStage = mathHelpers.pcheck(pWorse)
           ? INFECTION_STAGES.SICK
           : INFECTION_STAGES.ASYMPTOMATIC;
       }
-    }
-    else if (sim.infectionStage.key === "ASYMPTOMATIC") {
-      const meanDays = this.paramsModel.value("MEAN_INFECTION_ASYMPTOMATIC_DURATION");
-      if (mathHelpers.pcheckPoisson(seconds, meanDays*SEC_PER_DAY)) {
+    } else if (sim.infectionStage.key === "ASYMPTOMATIC") {
+      const meanDays = this.paramsModel.value(
+        "MEAN_INFECTION_ASYMPTOMATIC_DURATION"
+      );
+      if (mathHelpers.pcheckPoisson(seconds, meanDays * SEC_PER_DAY)) {
         let pWorse = 1 - this.paramsModel.value("PROB_ASYMPTOMATIC_RECOVERY");
         pWorse = sim.magnifyRisk(pWorse);
         sim.infectionStage = mathHelpers.pcheck(pWorse)
@@ -323,8 +353,10 @@ const epidemiologyModel = {
           : INFECTION_STAGES.RECOVERED;
       }
     } else if (sim.infectionStage.key === "SICK") {
-      const meanDays = this.paramsModel.value("MEAN_INFECTION_SICKNESS_DURATION");
-      if (mathHelpers.pcheckPoisson(seconds, meanDays*SEC_PER_DAY)) {
+      const meanDays = this.paramsModel.value(
+        "MEAN_INFECTION_SICKNESS_DURATION"
+      );
+      if (mathHelpers.pcheckPoisson(seconds, meanDays * SEC_PER_DAY)) {
         let pWorse = this.paramsModel.value("PROB_SICK_BECOMES_CRITICAL");
         pWorse = sim.magnifyRisk(pWorse);
         sim.infectionStage = mathHelpers.pcheck(pWorse)
@@ -332,8 +364,10 @@ const epidemiologyModel = {
           : INFECTION_STAGES.RECOVERED;
       }
     } else if (sim.infectionStage.key === "CRITICAL") {
-      const meanDays = this.paramsModel.value("MEAN_INFECTION_CRITICAL_DURATION");
-      if (mathHelpers.pcheckPoisson(seconds, meanDays*SEC_PER_DAY)) {
+      const meanDays = this.paramsModel.value(
+        "MEAN_INFECTION_CRITICAL_DURATION"
+      );
+      if (mathHelpers.pcheckPoisson(seconds, meanDays * SEC_PER_DAY)) {
         let pWorse = this.paramsModel.value("PROB_CRITICAL_MORTALITY");
         pWorse = sim.magnifyRisk(pWorse);
         sim.infectionStage = mathHelpers.pcheck(pWorse)
@@ -342,18 +376,129 @@ const epidemiologyModel = {
       }
     }
 
-    if (sim.infectionStage.key === "RECOVERED" &&
-        !!this.paramsModel.value("BOOL_REINFECTION")) {
+    if (
+      sim.infectionStage.key === "RECOVERED" &&
+      !!this.paramsModel.value("BOOL_REINFECTION")
+    ) {
       // Recovery confers no benefit. Flip them back to Healthy,
       // from whence they might be infected again.
       sim.infectionStage = INFECTION_STAGES.HEALTHY;
     }
 
-    if (sim.infectionStage.key === "HEALTHY" ||
-        sim.infectionStage.key === "RECOVERED" ||
-        sim.infectionStage.key === "DEAD") {
+    if (
+      sim.infectionStage.key === "HEALTHY" ||
+      sim.infectionStage.key === "RECOVERED" ||
+      sim.infectionStage.key === "DEAD"
+    ) {
       sim.outcomeAtSimSeconds = this.totalSeconds;
     }
+  },
+
+
+  getCellKey(location) {
+    const cellkey = `${location.lat},${location.lng}`;
+    return cellkey;
+  },
+
+
+  getOrCreateContaminationCell(location) {
+    const cellkey = this.getCellKey(location);
+    let cellRecord = this.cellContamination[cellkey];
+    if (!cellRecord) {
+      cellRecord = {
+        key: cellkey,
+        location: location,
+        contaminationLevel: 0
+      };
+      this.cellContamination[cellkey] = cellRecord;
+    }
+    return cellRecord;
+  },
+
+
+  computeCellContamination(sim, seconds) {
+    // If the sim isn't contagious or if they are self-quarantining,
+    // then they aren't contaminating anything.
+    if (!sim.infectionStage.contagious || sim.isQuarantined) {
+      return;
+    }
+
+    // If we don't have a trajectory model, then we can't know which cells
+    // the sim has passed through.
+    if (!this.trajectoryModel) {
+      return;
+    }
+    // Get which cells the sim has passed through in the last time period.
+    const locationsVisited = this.trajectoryModel.locationsInLastTimeInterval(
+      sim.id,
+      seconds
+    );
+
+    // The user's specification of probability of contamination is for a "prolonged"
+    // encounter. Let's call it 5 minutes.
+    // Also, to be fair, we should actually compute how much time they spent in each
+    // each cell. But honestly there's so much variance in the real world that this
+    // simplifying assumption hardly makes a real difference; after all, we're not
+    // modeling the composition of the materials and surfaces in each location,
+    // nor the temperature and humidity at the time at which the patient traveled
+    // there, so there's no sense harping on moot points.
+    const probContam =
+      (this.paramsModel.value("PROB_CONTAMINATE") * seconds) /
+      (SEC_PROLONGED_CONTACT * locationsVisited.length);
+    locationsVisited.forEach(location => {
+      if (!mathHelpers.pcheck(probContam)) {
+        return;
+      }
+      let cell = this.getOrCreateContaminationCell(location);
+      cell.contaminationLevel++;
+    });
+  },
+
+
+  catchInfectionsFromLocations(sim, seconds) {
+    // If the sim isn't infectable or is quarantined, then
+    // we have nothing to do.
+    if (!sim.infectionStage.infectable || sim.isQuarantined) {
+      return;
+    }
+
+    // If we don't have a trajectory model, then we can't know which cells
+    // the sim has passed through.
+    if (!this.trajectoryModel) {
+      return;
+    }
+    // Get which cells the sim has passed through in the last time period.
+    const locationsVisited = this.trajectoryModel.locationsInLastTimeInterval(
+      sim.id,
+      seconds
+    );
+
+    // Determine whether or not the sim has passed through any contaminated cells.
+    const probCatch =
+      (this.paramsModel.value("PROB_CATCH_FROM_LOCATION") * seconds) /
+      (SEC_PROLONGED_CONTACT * locationsVisited.length);
+    locationsVisited.forEach(location => {
+      const cellkey = `${location.lat},${location.lng}`;
+      const cellRecord = this.cellContamination[cellkey];
+      if (!cellRecord || !cellRecord.contaminationLevel) {
+        return;
+      }
+      // Magnify the catch probability by the contamination level
+      const probCatchThisCell = 1 - ((1 - probCatch) / cellRecord.contaminationLevel)
+      if (!mathHelpers.pcheck(probCatchThisCell)) {
+        return;
+      }
+      this.infect(sim);
+    });
+  },
+
+
+  get heatmapPoints() {
+    const arr = [...Object.values(this.cellContamination)].map(cell => ({
+      location: new google.maps.LatLng(cell.location.lat, cell.location.lng),
+      weight: cell.contaminationLevel
+    }));
+    return arr;
   },
 
 
@@ -361,8 +506,10 @@ const epidemiologyModel = {
     this.totalSeconds += seconds;
     Object.values(this.simInfo).forEach(sim => {
       this.computeInfectionStageProgress(sim, seconds);
-    });
+      this.computeCellContamination(sim, seconds);
 
+      this.catchInfectionsFromLocations(sim, seconds);
+    });
   }
 };
 

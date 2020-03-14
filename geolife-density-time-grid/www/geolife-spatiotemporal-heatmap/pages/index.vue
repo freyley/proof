@@ -318,6 +318,7 @@ const colorInterpolate = require('color-interpolate');
 
 
 epidemiologyModel.paramsModel = paramsModel;
+epidemiologyModel.trajectoryModel = trajectoryModel;
 
 
 export default {
@@ -395,9 +396,12 @@ export default {
       epidemiologyModel.generateSimInfo(trajectoryModel.trajectoryIds);
       const patientZeroes = epidemiologyModel.infectPatientZeroes();
 
+      // SUGGESTION: Maybe look for the *earliest* Patient Zero record.
       const patientZeroInitialRecord = trajectoryModel.initialRecord(patientZeroes[0].id);
       this.currentTime = patientZeroInitialRecord.timeInCell.begin;
       this.mapInitCenter = patientZeroInitialRecord.location;
+
+      this.mapMarkersByTrajId = {};
 
       this.heatmapPointsByCellKey = {};
       if (this.heatmapObj) {
@@ -436,7 +440,6 @@ export default {
         opacity: .9,
         maxIntensity: 20,
         gradient: [
-        'rgba(0, 255, 0, 0)',
         'rgba(255, 255, 0, 0)',
         'rgba(255, 255, 0, 1)',
         'rgba(255, 0, 0, 1)',
@@ -496,17 +499,8 @@ export default {
       if (!this.googleMapObject || !this.heatmapObj) {
         return;
       }
-      const cellVisits = trajectoryModel.locationsInLastTimeInterval(this.timeIncrement);
-      Object.entries(cellVisits).forEach( ([trajId, coordses]) => {
-        coordses.forEach(coords => {
-          let heatmapPoint = this.getOrCreateHeatmapPoint(coords);
-          //heatmapPoint.weight += 1;
-          //heatmapPoint.weight = Math.min(100, heatmapPoint.weight);
-
-          const heatmapPointsData = [...Object.values(this.heatmapPointsByCellKey)];
-          this.heatmapObj.setData(heatmapPointsData);
-        });
-      });
+      const heatmapPointsData = epidemiologyModel.heatmapPoints;
+      this.heatmapObj.setData(heatmapPointsData);
     },
 
     updateMap() {
@@ -521,7 +515,10 @@ export default {
         this.currentTime = timeMax;
       }
 
-      this.epidemiologyModel.timePass(this.timeIncrement);
+      trajectoryModel.seek(this.currentTime);
+      epidemiologyModel.timePass(this.timeIncrement);
+
+      this.updateMap();
     },
 
     play() {
@@ -539,13 +536,5 @@ export default {
 
   mounted() {
   },
-
-  watch: {
-    currentTime(value, oldValue) {
-      trajectoryModel.seek(this.currentTime);
-
-      this.updateMap();
-    }
-  }
 }
 </script>
