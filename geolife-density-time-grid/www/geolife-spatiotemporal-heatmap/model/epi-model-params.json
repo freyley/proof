@@ -353,6 +353,16 @@
     "param_group": "Population characteristics"
   },
   {
+    "key": "VIRUS_SURFACE_HALFLIFE",
+    "name": "Virus half-life on surfaces",
+    "description": "This is the mean number of days that the virus lasts out in the open.",
+    "valuetype": "float",
+    "range_min": 1,
+    "range_max": 60,
+    "default": 20,
+    "param_group": "Virus characteristics"
+  },
+  {
     "key": "PROB_CONTAMINATION_DECAY_HOUSEHOLD",
     "name": "Household probability of decontamination",
     "description": "This is the probability that a contaminated household ceases to be contaminated at the end of a day.",
@@ -465,8 +475,8 @@
     "description": "This is the probability that a sim in prolonged contact with a contaminated location catches the virus.",
     "valuetype": "float",
     "range_min": 0,
-    "range_max": 0.001,
-    "default": 0.0001,
+    "range_max": 0.05,
+    "default": 0.0002,
     "param_group": "Virus characteristics"
   },
   {
@@ -475,8 +485,8 @@
     "description": "This is the probability that a sim in a single prolonged contact event with a contagious infectee catches the virus.",
     "valuetype": "float",
     "range_min": 0,
-    "range_max": 0.001,
-    "default": 0.0002,
+    "range_max": 0.05,
+    "default": 0.0005,
     "param_group": "Virus characteristics"
   },
   {

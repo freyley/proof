@@ -530,6 +530,24 @@ const epidemiologyModel = {
     });
   },
 
+  decayContaminations(seconds) {
+    const meanDur = this.paramsModel.value("VIRUS_SURFACE_HALFLIFE") * SEC_PER_DAY;
+    const cells = [...Object.values(this.cellContamination)];
+    const cellKeysToRemove = [];
+    cells.forEach(cell => {
+      if (!mathHelpers.pcheckPoisson(seconds, meanDur)) {
+        return;
+      }
+      cell.contaminationLevel -= .1;
+      if (cell.contaminationLevel <= 0) {
+        cellKeysToRemove.push(cell.key);
+      }
+    });
+    cellKeysToRemove.forEach(k => {
+      delete this.cellContamination[k];
+    });
+  },
+
   get heatmapPoints() {
     const arr = [...Object.values(this.cellContamination)].map(cell => ({
       location: new google.maps.LatLng(cell.location.lat, cell.location.lng),
@@ -558,6 +576,8 @@ const epidemiologyModel = {
       this.catchInfectionsFromLocations(sim, seconds);
 
       this.allCatchInfectionsFromInfectees(seconds);
+
+      this.decayContaminations(seconds);
     });
   },
 

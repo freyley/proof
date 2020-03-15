@@ -148,7 +148,7 @@
                       :persistent-hint="true"
                       :dense="true"
                       :thumb-label="true"
-                      :step="param.valuetype === 'integer' ? 1 : ((param.range_max - param.range_min) / 20)"
+                      :step="param.valuetype === 'integer' ? 1 : ((param.range_max - param.range_min) / 50)"
                     ></v-slider>
                   </div>
                 </v-expansion-panel-content>
