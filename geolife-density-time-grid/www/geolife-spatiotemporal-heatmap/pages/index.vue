@@ -36,7 +36,8 @@
             </p>
             <p>
               NOTE: This is simulated data representing a theoretical epidemiological model.
-              This simulation does not contain any actual COVID-19 transmission data, and should
+              This simulation does not contain any actual COVID-19 transmission data
+              nor the exact movements of any real individuals, and should
               not be used in place of studying actual real-world infection cases.
             </p>
           </v-alert>
