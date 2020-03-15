@@ -30,8 +30,15 @@
           <v-alert type="success"
               :dismissible="true"
               v-if="trajectoryModel.isDataLoaded">
-            Data loaded in
-            {{trajectoryModel.durationDataLoad}} ms
+            <p>
+              Data loaded in
+              {{trajectoryModel.durationDataLoad}} ms
+            </p>
+            <p>
+              NOTE: This is simulated data representing a theoretical epidemiological model.
+              This simulation does not contain any actual COVID-19 transmission data, and should
+              not be used in place of studying actual real-world infection cases.
+            </p>
           </v-alert>
 
           <v-alert type="info" v-if="hoverParam">
