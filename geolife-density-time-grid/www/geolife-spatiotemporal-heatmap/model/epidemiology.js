@@ -567,7 +567,7 @@ const epidemiologyModel = {
     return numUsersContagious / simInfos.length;
   },
 
-  timePass(seconds) {
+  advanceTime(seconds) {
     this.totalSeconds += seconds;
     Object.values(this.simInfo).forEach(sim => {
       this.computeInfectionStageProgress(sim, seconds);

@@ -20,7 +20,10 @@ const trajectoryModel = {
 
     this.trajectoryData = null;
 
-    this.currentTrajRecordIndexByTrajId = {};
+    this.currentTrajSeeks = {};
+    this.locations = {};
+    this.locationsVisited = {};
+
     this.seekUnixtime = 0;
   },
 
@@ -60,101 +63,21 @@ const trajectoryModel = {
       end: 0,
       span: 0
     };
+    /*
     if (this.trajectoryData && this.trajectoryData.ranges) {
       retval.begin = this.trajectoryData.ranges['time-start'];
       retval.end = this.trajectoryData.ranges['time-end'];
       retval.span = retval.end - retval.begin;
     }
+    */
     return retval;
-  },
-
-
-  initialRecord(trajId) {
-    const trajectory = this.trajectories[trajId];
-    if (!trajectory || !trajectory.length) {
-      return null;
-    }
-    const trajRecord = trajectory[0];
-    const record = {
-      timeInCell: {
-        begin: trajRecord[0],
-        end: trajRecord[1]
-      },
-      location: {
-        lat: trajRecord[2],
-        lng: trajRecord[3]
-      }
-    };
-    return record;
-  },
-
-
-  // Returns a collection of all trajectory locations at the current seek time position.
-  get locations() {
-    const trajLocations = {};
-    Object.keys(this.trajectories).forEach(trajId => {
-      trajLocations[trajId] = null;
-
-      const iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
-      const trajRecord = this.trajectories[trajId][iTrajRec];
-
-      if (!trajRecord) {
-        return;
-      }
-
-      // Make sure that the record represents a valid present location.
-      if (trajRecord[0] > this.seekUnixtime ||
-        trajRecord[1] <= this.seekUnixtime) {
-        // The current seek position is either before the start of the
-        // trajectory record, or after the end of it.
-        return;
-      }
-
-      trajLocations[trajId] = {
-        lat: trajRecord[2],
-        lng: trajRecord[3]
-      };
-    });
-    return trajLocations;
   },
 
 
   // Returns a list of the locations the given trajId has
   // been in since timespanSeconds ago.
   locationsInLastTimeInterval(trajId, timespanSeconds) {
-    const tSince = this.seekUnixtime - timespanSeconds;
-    const trajectory = this.trajectories[trajId];
-    if (!trajectory) {
-      return [];
-    }
-
-    const locationsVisited = [];
-    let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
-    if (!iTrajRec && iTrajRec !== 0) {
-      // iTrajRec is null or undefined. That means no cells. Skip this trajId
-      return;
-    }
-    for (; iTrajRec>=0; iTrajRec--) {
-      const trajRec = trajectory[iTrajRec];
-      if (trajRec[1] < tSince) {
-        // This record ended before our last time interval began.
-        // We shouldn't bother backing up any more.
-        break;
-      }
-      if (trajRec[0] > this.seekUnixtime) {
-        // This record starts after our current seek time, so it's in the future.
-        // Don't record this one, but continue backing up.
-        continue;
-      }
-      // If we got here, then this record represents a cell that the trajectory
-      // visited since the time interval.
-      const location = {
-        lat: trajRec[2],
-        lng: trajRec[3],
-      };
-      locationsVisited.push(location);
-    };
-    return locationsVisited;
+    return [];
   },
 
 
@@ -181,37 +104,27 @@ const trajectoryModel = {
   },
 
 
-  // Update the seek position.
-  // Move the trajectory records' current frame to the time slot
-  // specified by unixtime. If the unixtime is between the end
-  // and start times of two adjacent records, the seek ends up
-  // at the next record.
-  seek(unixtime) {
-    Object.entries(this.trajectories).forEach( ([trajId, trajectory]) => {
-      let iTrajRec = this.currentTrajRecordIndexByTrajId[trajId];
-      if (!iTrajRec) {
-        iTrajRec = 0;
+  advanceTime(seconds) {
+    // TODO: Make this incorporate seconds.
+    Object.entries(this.trajectories).forEach(([trajId, trajectory]) => {
+      this.currentTrajSeeks[trajId].index++;
+      this.currentTrajSeeks[trajId].index %= trajectory.length;
+
+      const currentRecord = trajectory[this.currentTrajSeeks[trajId].index];
+      const currentLocation = {
+        lat: currentRecord[0],
+        lng: currentRecord[1]
       }
-      while (unixtime < trajectory[iTrajRec][0] && iTrajRec > 0) {
-        // Seektime is before the start of this trajectory record.
-        // Look in the previous trajectory record.
-        iTrajRec--;
-      }
-      while (unixtime > trajectory[iTrajRec][1] && iTrajRec < trajectory.length - 1) {
-        // Seektime is after the end of this trajectory record.
-        // Look in the next trajectory record.
-        iTrajRec++;
-      }
-      this.currentTrajRecordIndexByTrajId[trajId] = iTrajRec;
+      this.locations[trajId] = currentLocation;
+      this.locationsVisited[trajId] = [currentLocation];
     });
-    this.seekUnixtime = unixtime;
   },
 
 
-  load($axios, options) {
+  load($axios) {
     this.markDataLoadStart();
 
-    const urlpath = 'data/trajectories_in_spatial_grid.json';
+    const urlpath = 'data/trajectories_ghosts.json';
     const p = $axios.get(urlpath).then(data => {
       const trajectoryData = data.data;
 
@@ -219,27 +132,27 @@ const trajectoryModel = {
       const pow10 = Math.pow(10, trajectoryData.gridparams['fixed-point-precision']);
       Object.values(trajectoryData.trajectories).forEach(trajectory => {
         trajectory.forEach((trajRecord) => {
-          trajRecord[2] /= pow10;
-          trajRecord[3] /= pow10;
+          trajRecord[0] /= pow10;
+          trajRecord[1] /= pow10;
         });
       });
 
-      if (options) {
-        if (options.dbgOnlyKeepFirstNTrajectories) {
-          const keysToKeep = [...Object.keys(trajectoryData.trajectories)]
-            .slice(0, options.dbgOnlyKeepFirstNTrajectories);
 
-          if (options.patientZero && !keysToKeep.includes(options.patientZero)) {
-            keysToKeep[0] = options.patientZero;
-          }
-
-          const trajectoriesFiltered = {};
-          keysToKeep.forEach(k => {
-            trajectoriesFiltered[k] = trajectoryData.trajectories[k];
-          });
-          trajectoryData.trajectories = trajectoriesFiltered;
-        }
-      }
+      this.currentTrajSeeks = {};
+      this.locations = {};
+      this.locationsVisited = {};
+      Object.entries(trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
+        this.currentTrajSeeks[trajId] = {
+          index: 0,
+          secondsRemaining: trajectory[2]
+        };
+        const currentLocation = {
+          lat: trajectory[0][0],
+          lng: trajectory[0][1]
+        };
+        this.locations[trajId] = currentLocation;
+        this.locationsVisited[trajId] = [currentLocation];
+      });
 
       this.trajectoryData = trajectoryData;
       this.markDataLoadComplete();

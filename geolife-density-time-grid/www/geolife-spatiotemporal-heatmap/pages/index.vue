@@ -89,13 +89,6 @@
           <v-row>
             <v-col>
               <v-slider
-                label="Seek position"
-                v-model="currentTime"
-                :min="trajectoryModel.timeRange.begin"
-                :max="trajectoryModel.timeRange.end"
-                :dense="true"
-              ></v-slider>
-              <v-slider
                 label="Playback speed"
                 v-model="timeIncrement"
                 :min="1 * 60"
@@ -167,7 +160,7 @@
       </v-col>
     </v-row>
 
-    <v-row>
+    <v-row  v-if="false">
       <v-container>
         <v-data-table
           class="siminfotable"
@@ -214,7 +207,7 @@
       </v-container>
     </v-row>
 
-    <v-row>
+    <v-row v-if="false">
       <v-container>
         <v-row>
           <v-col cols="12" md="6" lg="3">
@@ -404,10 +397,7 @@ export default {
       heatmapPointsByCellKey: {},
       heatmapObj: null,
 
-      mapInitCenter: {
-        lat: 40,
-        lng: -100
-      },
+      mapInitCenter: {lat: 39.9,lng: 116.4},
 
       simInfoTableHeaders: [
         {
@@ -448,7 +438,8 @@ export default {
 
   computed: {
     currentTimeDateObj() {
-      return new Date(this.currentTime * 1000);
+      const d = new Date('2007-07-15');
+      return new Date(this.currentTime * 1000 + d.getTime());
     }
   },
 
@@ -460,6 +451,9 @@ export default {
       this.mapMarkersByTrajId = {};
       this.heatmapPointsByCellKey = {};
       this.heatmapObj = null;
+
+      this.currentTime = 0;
+      this.mapInitCenter = {lat: 39.9, lng: 116.4};
 
       this.plotlydata = epidemiologyModel.INFECTION_STAGES_ORDER.map(k => {
         const infectionStage = epidemiologyModel.INFECTION_STAGES[k];
@@ -483,12 +477,7 @@ export default {
 
     resetWithData() {
       epidemiologyModel.generateSimInfo(trajectoryModel.trajectoryIds);
-      const patientZeroes = epidemiologyModel.infectPatientZeroes();
-
-      // SUGGESTION: Maybe look for the *earliest* Patient Zero record.
-      const patientZeroInitialRecord = trajectoryModel.initialRecord(patientZeroes[0].id);
-      this.currentTime = patientZeroInitialRecord.timeInCell.begin;
-      this.mapInitCenter = patientZeroInitialRecord.location;
+      epidemiologyModel.infectPatientZeroes();
 
       this.mapMarkersByTrajId = {};
 
@@ -578,10 +567,35 @@ export default {
       if (!this.googleMapObject) {
         return;
       }
-      Object.entries(trajectoryModel.locations).forEach(([trajId, location]) => {
+
+      // We can't necessarily use *all* of the locations, because that could
+      // be far too many points to show on the map at any one time.
+      // Google Maps could end up eating an insane amount of CPU. Just show
+      // the first n, and computationally track the rest without actually
+      // showing them on the map.
+      // We'll slowly rotate through the ones we actually show.
+      // We have to remember to remove the no-longer-used markers, though!
+      const trajLocations = trajectoryModel.locations;
+      const numLocTotal = Object.keys(trajLocations).length;
+
+      const nLocations = 50;
+      const nFirst = (Math.floor(this.currentTime / 1000)) % (numLocTotal - nLocations);
+      const mapMarkersToRemove = new Set([...Object.keys(this.mapMarkersByTrajId)]);
+
+      const locationsToUse = Object.entries(trajLocations).slice(nFirst, nFirst+nLocations);
+
+      locationsToUse.forEach(([trajId, location]) => {
         const mapMarker = this.getOrCreateMapMarker(trajId);
-        mapMarker.setPosition(location);
+        mapMarker.setPosition(new google.maps.LatLng(location.lat, location.lng));
+
+        // This map marker is still in use. Don't remove it.
+        mapMarkersToRemove.delete(trajId);
       });
+
+      [...mapMarkersToRemove].forEach(trajId => {
+        this.mapMarkersByTrajId[trajId].setMap(null);
+        delete this.mapMarkersByTrajId[trajId];
+      })
     },
 
     updateHeatmap() {
@@ -594,7 +608,7 @@ export default {
 
     updateMap() {
       this.updateMarkers();
-      this.updateHeatmap();
+      //this.updateHeatmap();
     },
 
     updatePlotly() {
@@ -607,17 +621,13 @@ export default {
     },
 
     advanceTime() {
-      const timeMax = trajectoryModel.timeRange.end;
       this.currentTime += this.timeIncrement;
-      if (this.currentTime > timeMax) {
-        this.currentTime = timeMax;
-      }
 
-      trajectoryModel.seek(this.currentTime);
-      epidemiologyModel.timePass(this.timeIncrement);
+      trajectoryModel.advanceTime(this.timeIncrement);
+      //epidemiologyModel.advanceTime(this.timeIncrement);
 
       this.updateMap();
-      this.updatePlotly();
+      //this.updatePlotly();
     },
 
     play() {
