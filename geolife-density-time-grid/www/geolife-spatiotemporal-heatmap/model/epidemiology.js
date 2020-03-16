@@ -168,6 +168,9 @@ const UNDERLYING_HEALTH_CONDITIONS = [
 
 const SEC_PER_HOUR = 60 * 60;
 const SEC_PER_DAY = SEC_PER_HOUR * 24;
+
+    // The user's specification of probability of contamination is for a "prolonged"
+    // encounter. Let's call it 5 minutes.
 const SEC_PROLONGED_CONTACT = 60 * 5;
 
 const epidemiologyModel = {
@@ -431,30 +434,36 @@ const epidemiologyModel = {
     if (!this.trajectoryModel) {
       return;
     }
+
+    // If there's no chance of contamination, then no problem!
+    if (!this.paramsModel.value("PROB_CONTAMINATE")) {
+      return;
+    }
+
+    // What's the mean time between contaminations?
+    // If the probability of a contamination event in one time interval
+    // of SEC_PROLONGED_CONTACT is PROB_CONTAMINATE, then the
+    // mean time between contamination events is
+    // SEC_PROLONGED_CONTACT / PROB_CONTAMINATE.
+    // NOTE: We can probably cache this. It's a small computation
+    // so it's okay for now.
+    const meanTimeToContaminate =
+      SEC_PROLONGED_CONTACT /
+      this.paramsModel.value("PROB_CONTAMINATE");
+
+    if (!mathHelpers.pcheckPoisson(seconds, meanTimeToContaminate)) {
+      return;
+    }
+    console.log(`${sim.id} infected a place`)
+
+
+    // TODO DEV IN PROGRESS
+    return;
     // Get which cells the sim has passed through in the last time period.
     const locationsVisited = this.trajectoryModel.locationsInLastTimeInterval(
       sim.id,
       seconds
     );
-
-    // The user's specification of probability of contamination is for a "prolonged"
-    // encounter. Let's call it 5 minutes.
-    // Also, to be fair, we should actually compute how much time they spent in each
-    // each cell. But honestly there's so much variance in the real world that this
-    // simplifying assumption hardly makes a real difference; after all, we're not
-    // modeling the composition of the materials and surfaces in each location,
-    // nor the temperature and humidity at the time at which the patient traveled
-    // there, so there's no sense harping on moot points.
-    const probContam =
-      (this.paramsModel.value("PROB_CONTAMINATE") * seconds) /
-      SEC_PROLONGED_CONTACT;
-    locationsVisited.forEach(location => {
-      if (!mathHelpers.pcheck(probContam)) {
-        return;
-      }
-      let cell = this.getOrCreateContaminationCell(location);
-      cell.contaminationLevel++;
-    });
   },
 
   catchInfectionsFromLocations(sim, seconds) {
@@ -469,6 +478,9 @@ const epidemiologyModel = {
     if (!this.trajectoryModel) {
       return;
     }
+
+    // TODO DEV IN PROGRESS
+    return
     // Get which cells the sim has passed through in the last time period.
     const locationsVisited = this.trajectoryModel.locationsInLastTimeInterval(
       sim.id,
@@ -531,7 +543,7 @@ const epidemiologyModel = {
   },
 
   decayContaminations(seconds) {
-    const meanDur = this.paramsModel.value("VIRUS_SURFACE_HALFLIFE") * SEC_PER_DAY;
+    const meanDur = this.paramsModel.value("MEAN_VIRUS_SURFACE_LONGEVITY") * SEC_PER_DAY;
     const cells = [...Object.values(this.cellContamination)];
     const cellKeysToRemove = [];
     cells.forEach(cell => {

@@ -22,7 +22,6 @@ const trajectoryModel = {
 
     this.currentTrajSeeks = {};
     this.locations = {};
-    this.locationsVisited = {};
 
     this.seekUnixtime = 0;
   },
@@ -57,30 +56,6 @@ const trajectoryModel = {
   },
 
 
-  get timeRange() {
-    const retval = {
-      begin: 0,
-      end: 0,
-      span: 0
-    };
-    /*
-    if (this.trajectoryData && this.trajectoryData.ranges) {
-      retval.begin = this.trajectoryData.ranges['time-start'];
-      retval.end = this.trajectoryData.ranges['time-end'];
-      retval.span = retval.end - retval.begin;
-    }
-    */
-    return retval;
-  },
-
-
-  // Returns a list of the locations the given trajId has
-  // been in since timespanSeconds ago.
-  locationsInLastTimeInterval(trajId, timespanSeconds) {
-    return [];
-  },
-
-
   markDataLoadStart() {
     this.dataLoadTimeStart = new Date();
     this.dataLoadTimeEnd = null;
@@ -93,6 +68,7 @@ const trajectoryModel = {
   markDataLoadComplete(error) {
     this.isDataLoading = false;
     if (error) {
+      console.log(error);
       this.dataLoadTimeEnd = null;
       this.isDataLoaded = false;
       this.errorMsg = error.message || JSON.stringify(error);
@@ -105,28 +81,69 @@ const trajectoryModel = {
 
 
   advanceTime(seconds) {
-    // TODO: Make this incorporate seconds.
     Object.entries(this.trajectories).forEach(([trajId, trajectory]) => {
-      this.currentTrajSeeks[trajId].index++;
-      this.currentTrajSeeks[trajId].index %= trajectory.length;
+      const currentSeek = this.currentTrajSeeks[trajId];
 
-      const currentRecord = trajectory[this.currentTrajSeeks[trajId].index];
-      const currentLocation = {
+      let secondsRemaining = seconds;
+      while (secondsRemaining > 0) {
+        const secondsToSpendInCurrentRecord =
+          Math.min(secondsRemaining,
+            currentSeek.secondsRequired - currentSeek.secondsConsumed);
+
+        currentSeek.secondsConsumed += secondsToSpendInCurrentRecord;
+        if (currentSeek.secondsConsumed >= currentSeek.secondsRequired) {
+          currentSeek.index++;
+          currentSeek.index %= trajectory.length;
+          currentSeek.secondsConsumed = 0;
+          currentSeek.secondsRequired = trajectory[currentSeek.index][2];
+        }
+
+        secondsRemaining -= secondsToSpendInCurrentRecord;
+      }
+
+      const currentRecord = trajectory[currentSeek.index];
+
+      const fromLocation = this.locations[trajId];
+      const toLocation = {
         lat: currentRecord[0],
         lng: currentRecord[1]
+      };
+      const deltaLatLong = {
+        lat: toLocation.lat - fromLocation.lat,
+        lng: toLocation.lng - fromLocation.lng
+      };
+      const journeyFrac = currentSeek.secondsConsumed / currentSeek.secondsRequired;
+      let newLocation = {
+        lat: journeyFrac * deltaLatLong.lat + fromLocation.lat,
+        lng: journeyFrac * deltaLatLong.lng + fromLocation.lng,
+      };
+      if (deltaLatLong.lat > this.gridparams['spatial-cell-size-degrees-latitude'] ||
+          deltaLatLong.lng > this.gridparams['spatial-cell-size-degrees-longitude']) {
+        newLocation = toLocation;
+        currentSeek.secondsConsumed = 0;
       }
-      this.locations[trajId] = currentLocation;
-      this.locationsVisited[trajId] = [currentLocation];
+
+      this.locations[trajId] = newLocation;
     });
   },
 
 
-  load($axios) {
+  load($axios, options) {
     this.markDataLoadStart();
 
     const urlpath = 'data/trajectories_ghosts.json';
     const p = $axios.get(urlpath).then(data => {
       const trajectoryData = data.data;
+
+      if (options) {
+        if (options.dbgOnlyKeepFirstNTrajectories) {
+          const keysToKeep = [...Object.keys(trajectoryData.trajectories)].
+              slice(0, options.dbgOnlyKeepFirstNTrajectories);
+          const trajSlice = {};
+          keysToKeep.forEach(k => {trajSlice[k] = trajectoryData.trajectories[k]});
+          trajectoryData.trajectories = trajSlice;
+        }
+      }
 
       // Convert the lat/long from fixed-point integer to floats.
       const pow10 = Math.pow(10, trajectoryData.gridparams['fixed-point-precision']);
@@ -137,28 +154,27 @@ const trajectoryModel = {
         });
       });
 
-
       this.currentTrajSeeks = {};
       this.locations = {};
-      this.locationsVisited = {};
       Object.entries(trajectoryData.trajectories).forEach( ([trajId, trajectory]) => {
+        const firstRecord = trajectory[0];
         this.currentTrajSeeks[trajId] = {
           index: 0,
-          secondsRemaining: trajectory[2]
+          secondsConsumed: 0,
+          secondsRequired: firstRecord[2]
         };
         const currentLocation = {
-          lat: trajectory[0][0],
-          lng: trajectory[0][1]
+          lat: firstRecord[0],
+          lng: firstRecord[1]
         };
         this.locations[trajId] = currentLocation;
-        this.locationsVisited[trajId] = [currentLocation];
       });
 
       this.trajectoryData = trajectoryData;
       this.markDataLoadComplete();
     })
     .catch(err => {
-      this.this.markDataLoadComplete(err);
+      this.markDataLoadComplete(err);
     });
 
     return p;

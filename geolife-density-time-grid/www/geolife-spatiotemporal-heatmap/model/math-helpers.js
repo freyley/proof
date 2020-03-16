@@ -26,6 +26,9 @@ export const pcheckPoisson = (t, meanTimeToEvent) => {
   // in one lambda period?
   // Mathematically, it's (e^-lambda)*(lambda^0) / (0!)
   // This easily simplifies to just e^-lambda.
+  // NOTE: We should probably compute this, cache it in the calling function,
+  // and then refer to the probability with a pcheck. But it's okay
+  // for now.
   const pAtLeastOneEvent = 1 - Math.exp(-lambda);
   return pcheck(pAtLeastOneEvent);
 };

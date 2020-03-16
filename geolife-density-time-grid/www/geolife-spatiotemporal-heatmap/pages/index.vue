@@ -160,7 +160,7 @@
       </v-col>
     </v-row>
 
-    <v-row  v-if="false">
+    <v-row>
       <v-container>
         <v-data-table
           class="siminfotable"
@@ -207,7 +207,7 @@
       </v-container>
     </v-row>
 
-    <v-row v-if="false">
+    <v-row>
       <v-container>
         <v-row>
           <v-col cols="12" md="6" lg="3">
@@ -490,7 +490,7 @@ export default {
     loadData() {
       this.reset();
       trajectoryModel.load(this.$axios, {
-        dbgOnlyKeepFirstNTrajectories: false
+        dbgOnlyKeepFirstNTrajectories: 1
       }).then(() => {
         this.resetWithData();
 
@@ -578,8 +578,13 @@ export default {
       const trajLocations = trajectoryModel.locations;
       const numLocTotal = Object.keys(trajLocations).length;
 
-      const nLocations = 50;
-      const nFirst = (Math.floor(this.currentTime / 1000)) % (numLocTotal - nLocations);
+      const nLocations = 25;
+      const secNextFirst = 60 * 60 * 24;
+      const nFirst = (Math.floor(this.currentTime / secNextFirst)) % Math.max(1, numLocTotal - nLocations);
+      // We don't have any logic to restart from the beginning of the list.
+      // At the end of all rotations, we just "flip" back to the beginning
+      // all at once.
+
       const mapMarkersToRemove = new Set([...Object.keys(this.mapMarkersByTrajId)]);
 
       const locationsToUse = Object.entries(trajLocations).slice(nFirst, nFirst+nLocations);
@@ -624,10 +629,10 @@ export default {
       this.currentTime += this.timeIncrement;
 
       trajectoryModel.advanceTime(this.timeIncrement);
-      //epidemiologyModel.advanceTime(this.timeIncrement);
+      epidemiologyModel.advanceTime(this.timeIncrement);
 
       this.updateMap();
-      //this.updatePlotly();
+      this.updatePlotly();
     },
 
     play() {
