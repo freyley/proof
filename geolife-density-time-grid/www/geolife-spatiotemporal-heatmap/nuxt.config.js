@@ -55,7 +55,7 @@ export default {
   axios: {
     baseURL:
       process.env.NODE_ENV === "production"
-        ? "https://www.covid19risk.com/heatmap/"
+        ? "http://covidwatch.s3-website-us-west-1.amazonaws.com/heatmap/"
         : "http://localhost:3000/heatmap/"
   },
   /*
