@@ -3,8 +3,7 @@
 BUCKETNAME=covidwatch
 FOLDERNAME=heatmap
 
-# TODO: Get Cloudfront invalidation ID from Jeff
-CLOUDFRONT_INVALIDATION_ID=
+CLOUDFRONT_INVALIDATION_ID=E3DTRHAKABXKO3
 
 AWSPROFILE=$1
 NOBUILD=$2
@@ -76,7 +75,7 @@ aws s3 --profile "$AWSPROFILE" rm "$S3_DEPRECATE_URI" --recursive
 
 if [ ! -z "$CLOUDFRONT_INVALIDATION_ID" ]; then
   aws cloudfront create-invalidation \
-      --profile lbd \
+      --profile "$AWSPROFILE" \
       --distribution-id $CLOUDFRONT_INVALIDATION_ID \
       --invalidation-batch "{\"Paths\": {\"Items\": [\"/*\"], \"Quantity\": 1}, \"CallerReference\":\"`date`\"}"
 fi
