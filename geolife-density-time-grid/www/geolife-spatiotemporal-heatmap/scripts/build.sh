@@ -5,15 +5,19 @@ FOLDERNAME=heatmap
 CLOUDFRONT_INVALIDATION_ID=TODO_GET_FROM_JEFF
 
 AWSPROFILE=$1
+NOBUILD=$2
 
 argquit() {
   echo "Please run this script from the root development folder of the nuxt app."
   echo "Syntax: "
-  echo "    ./scripts/build.sh <awsprofile>"
+  echo "    ./scripts/build.sh <awsprofile> [nobuild]"
   echo ""
   echo "    awsprofile: The name of your AWS profile. It should correspond to"
   echo "                a set of credentials in your ~/.aws/credentials"
   echo "                and config in ~/.aws/config files."
+  echo ""
+  echo "    nobuild: Specify this second argument if you have already performed"
+  echo "             \`npm run generate\` and you just want to copy to S3."
   exit 1
 }
 
@@ -32,6 +36,12 @@ if [ "$0" != "./scripts/build.sh" ]; then
   argquit
 fi
 
+if [ ! -z "$NOBUILD" ] && [ "$NOBUILD" != "nobuild" ]; then
+  echo "ERROR: I don't understand the second positional argument: $NOBUILD"
+  echo "The only valid value is \`nobuild\`"
+  echo ""
+  argquit
+fi
 
 
 echo
@@ -40,7 +50,11 @@ echo Deploying to: $BUCKETNAME
 echo
 
 
-npm run generate
+
+if [ "$NOBUILD" != "nobuild" ]; then
+  npm run generate
+fi
+
 
 
 S3_BUILDFOLDER_SUFFIX="`date +%s`"
